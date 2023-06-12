@@ -5,6 +5,10 @@ Let's build a conversational engine so we can talk to our computers!
 
 [Demo with audio](https://twitter.com/yacineMTB/status/1667739001158025216)
 
+
+## Next
+- TTS engine added
+
 ## Goals
 - Runs completely locally
 - Usuable by my grandmother, if she spoke english
