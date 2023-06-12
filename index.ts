@@ -57,8 +57,7 @@ const conversation = new Conversation();
 let lastWhisperTranscription = '';
 let completedInferences: string[] = [];
 
-// Event handlers
-process.stdin.on('readable', () => {
+audioProcess.stdout.on('readable', () => {
   let data;
   // Implicit, should be injected into conversation
   while (data = audioProcess.stdout.read()) {
