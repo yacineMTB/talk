@@ -1,10 +1,12 @@
 import { spawn, ChildProcessWithoutNullStreams, exec } from 'child_process';
 import { v4 as uuidv4 } from 'uuid';
+import config from '../config.json';
 import fs from 'fs';
+const { piperModelPath } = config;
 
 export const generateAudio = (text: string): Promise<string> => {
   return new Promise<string>((resolve, reject) => {
-    const modelPath = '~/models/piper/en-gb-southern_english_female-low.onnx';
+    const modelPath = piperModelPath;
     const fileName = uuidv4();
     const directoryPath = './tmp';
     const outputFilePath = `${directoryPath}/${fileName}.wav`;

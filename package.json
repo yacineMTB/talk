@@ -5,7 +5,8 @@
     "requires": true,
     "license": "MIT",
     "scripts": {
-        "start": "npx ts-node ./index.ts"
+        "start": "npx ts-node ./index.ts",
+        "test-voice": "npx ts-node ./tests/voice.test.ts"
     },
     "dependencies": {
         "ts-node": "^10.9.1",
