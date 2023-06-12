@@ -1,9 +1,14 @@
 # Talk
-Now that we've solved the thing, lets build a conversational engine so we can talk to our computers!
+![Talk asset art](https://github.com/yacineMTB/talk/blob/master/assets/talklogo.png?raw=true)
+Let's build a conversational engine so we can talk to our computers!
 
 # Demo
+[![Demo with audio]()](https://twitter.com/yacineMTB/status/1667739001158025216)
+
 
 ## Roadmap
+- Be able to talk to the thing
+- Extendible system to 
 
 ## Goals
 - Runs completely locally
@@ -14,7 +19,6 @@ Now that we've solved the thing, lets build a conversational engine so we can ta
 ## Running
 - Clone the submodules
 - Build & run them (make sure that whisper.cpp & llama.cpp can run)
-- 
 - In whisper.cpp git submodule `npx cmake-js compile --CDWHISPER_CUBLAS="ON" -T whisper-addon -B Release && cp -r ./build/Release  /home/kache/attractor/talk/conversation/build/whisper`
 - Note that the above command has --CDWHISPER_CUBLAS=ON. Change that depending on the build parameters you want for your whisper engine. cmake-js can take cmake flags using --CD{The flag you want}
 - Move the created ./whisper.cpp/build/Relase contents to ./bindings/whisper/whisper-addon
