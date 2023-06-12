@@ -2,7 +2,6 @@
 ![Talk asset art](https://github.com/yacineMTB/talk/blob/master/assets/talklogo.png?raw=true)
 Let's build a conversational engine so we can talk to our computers!
 
-# Demo
 [![Demo with audio]()](https://twitter.com/yacineMTB/status/1667739001158025216)
 
 
