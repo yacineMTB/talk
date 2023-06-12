@@ -8,10 +8,12 @@
         "start": "npx ts-node ./index.ts"
     },
     "dependencies": {
-        "ts-node": "^10.9.1"
+        "ts-node": "^10.9.1",
+        "uuid": "^9.0.0"
     },
     "devDependencies": {
         "@types/node": "^18.16.16",
+        "@types/uuid": "^9.0.2",
         "typescript": "^4.9.5"
     }
 }
