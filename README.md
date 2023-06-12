@@ -4,16 +4,12 @@ Let's build a conversational engine so we can talk to our computers!
 
 [![Demo with audio]()](https://twitter.com/yacineMTB/status/1667739001158025216)
 
-
-## Roadmap
-- Be able to talk to the thing
-- Extendible system to 
-
 ## Goals
 - Runs completely locally
 - Usuable by my grandmother, if she spoke english
 - Simple to extend
 - Discover little HCI hacks
+- Being able to learn something while driving
 
 ## Running
 - Clone the submodules
