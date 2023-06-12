@@ -1,8 +1,10 @@
 node_modules
 bindings
-//bindings/
+/bindings/
 .env
 dist
+/.vscode/
+.vscode
 
 ./node_modules/
 npm-debug.log
