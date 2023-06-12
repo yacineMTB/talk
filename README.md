@@ -11,6 +11,7 @@ Let's build a conversational engine so we can talk to our computers!
 - Simple to extend
 - Discover little HCI hacks
 - Being able to learn something while driving
+- Clean up the LLaMa node addon in the forked submodule enough to merge into mainline
 
 ## Running
 - Clone the submodules
