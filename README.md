@@ -11,7 +11,7 @@ Let's build a conversational engine so we can talk to our computers!
 - Simple to extend
 - Discover little HCI hacks
 - Being able to learn something while driving
-- Clean up the LLaMa node addon in the forked submodule enough to merge into mainline
+- Clean up the [LLaMa node cpp binding](https://github.com/yacineMTB/llama.cpp/blob/cf70f603d5a50f553c022a3017ee901afc237236/examples/addon.node/addon.cpp) I added in my forked submodule enough to merge into mainline
 
 ## Running
 - Clone the submodules
