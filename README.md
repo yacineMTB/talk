@@ -18,6 +18,7 @@ Let's build a conversational engine so we can talk to our computers!
 - Clean up the [LLaMa node cpp binding](https://github.com/yacineMTB/llama.cpp/blob/cf70f603d5a50f553c022a3017ee901afc237236/examples/addon.node/addon.cpp) I added in my forked submodule enough to merge into mainline
 
 ## Running
+- npm install
 - Clone the submodules
 - Build & run them (make sure that whisper.cpp & llama.cpp can run)
 - In whisper.cpp git submodule `npx cmake-js compile --CDWHISPER_CUBLAS="ON" -T whisper-addon -B Release && cp -r ./build/Release  /home/kache/attractor/talk/conversation/build/whisper`
