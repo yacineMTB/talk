@@ -5,6 +5,8 @@ Let's build a conversational engine so we can talk to our computers!
 
 [Demo with audio](https://twitter.com/yacineMTB/status/1667739001158025216)
 
+Is this project useful to you? Give me a [**⬆money upvote!⬆**](https://donate.stripe.com/fZedSC6tOdvF7ew9AD)
+
 
 ## Next
 - TTS engine added
