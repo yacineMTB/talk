@@ -1,0 +1,43 @@
+{
+    "name": "conversation",
+    "version": "1.0.0",
+    "main": "index.js",
+    "author": "Yacine Brahimi <yacine.bram@gmail.com>",
+    "license": "UNLICENSED",
+    "devDependencies": {
+        "@types/express": "^4.17.16",
+        "@types/node": "^18.16.16",
+        "@types/ws": "^8.5.4",
+        "concurrently": "^7.6.0",
+        "nodemon": "^2.0.20",
+        "tsx": "^3.12.7",
+        "typescript": "^4.9.5"
+    },
+    "dependencies": {
+        "@llama-node/llama-cpp": "^0.1.6",
+        "@prisma/client": "^4.11.0",
+        "@types/lodash": "^4.14.191",
+        "@types/multer": "^1.4.7",
+        "cors": "^2.8.5",
+        "dotenv": "^16.0.3",
+        "express": "^4.18.2",
+        "llama-node": "^0.1.6",
+        "lodash": "^4.17.21",
+        "mp3-duration": "^1.1.0",
+        "multer": "^1.4.5-lts.1",
+        "node-addon-api": "^6.1.0",
+        "openai": "^3.2.1",
+        "prisma": "^4.11.0",
+        "ts-node": "^10.9.1",
+        "wav-headers": "^1.0.1",
+        "wavefile": "^11.0.0",
+        "websocket": "^1.0.34",
+        "ws": "^8.12.0"
+    },
+    "scripts": {
+        "build": "rm -rf dist && npx tsc",
+        "start": "node dist/src/index.js",
+        "seed": "node dist/scripts/seed.js",
+        "dev": "tsx watch --ignore '*.json' ./src/index.ts"
+    }
+}

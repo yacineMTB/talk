@@ -1,0 +1,8 @@
+[submodule "whisper.cpp"]
+	path = whisper.cpp
+    url = git@github.com:yacineMTB/whisper.cpp.git
+    branch = yacine/streaming-node-binding
+[submodule "llama.cpp"]
+	path = llama.cpp
+	url = git@github.com:yacineMTB/llama.cpp.git
+    branch = yacine/node.addon
