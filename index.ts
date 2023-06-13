@@ -10,7 +10,13 @@ const llama = require("./bindings/llama/llama-addon");
 const audioProcess = spawn('bash', [audioListenerScript]);
 
 // Init ggml cpp bindings
-llama.init({ model: llamaModelPath });
+if ('lora' in config) {
+  const lora = config.lora;
+  llama.init({ model: llamaModelPath, lora: lora});
+} else {
+  llama.init({ model: llamaModelPath});
+}
+
 whisper.init(whisperModelPath);
 
 let globalLlamaPromise: Promise<string>;

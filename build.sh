@@ -64,7 +64,7 @@ npx cmake-js compile --CDWHISPER_CUBLAS="$CUBLAS_FLAG" -T whisper-addon -B Relea
 
 # Copy compiled code to the specified directory
 echo "Moving compiled whisper.cpp code to bindings directory..."
-cp -r build/Release/ ../bindings/whisper
+cp -r build/Release/* ../bindings/whisper/
 
 # Navigate back to the root directory
 cd ../
@@ -79,11 +79,11 @@ cd ../../
 
 # Compile using cmake-js with specific flags
 echo "Compiling llama.cpp examples..."
-npx cmake-js compile --CDWHISPER_CUBLAS="$CUBLAS_FLAG" -T llama-addon -B Release
+npx cmake-js compile --CDLLAMA_CUBLAS="$CUBLAS_FLAG" -T llama-addon -B Release
 
 # Copy compiled code to the specified directory
 echo "Moving compiled llama.cpp code to bindings directory..."
-cp -r build/Release/ ../bindings/llama
+cp -r build/Release/* ../bindings/llama/
 
 # Navigate back to the root directory
 cd ../
@@ -121,7 +121,9 @@ if [[ $DOWNLOAD_CHOICE == "y" || $DOWNLOAD_CHOICE == "Y" ]]; then
     echo '{
         "llamaModelPath": "'models/llama/$LLAMA_MODEL_NAME'",
         "whisperModelPath": "'models/whisper/$WHISPER_MODEL_NAME'",
-        "audioListenerScript": "sample_audio.sh"
+        "audioListenerScript": "sample_audio.sh",
+        "lora": "",
+        "piperModelPath": "~/models/piper/en-gb-southern_english_female-low.onnx"
     }' > config.json
 else
     echo "Skipping model download..."
