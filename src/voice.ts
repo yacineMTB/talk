@@ -27,7 +27,6 @@ export const generateAudio = (text: string): Promise<string> => {
         console.error(`exec error: ${error}`);
         reject(error);
       } else {
-        console.log(`Audio file has been saved to ${outputFilePath}`);
         resolve(fileName);
       }
     });
@@ -54,7 +53,6 @@ export const playAudioFile = async (fileName: string): Promise<void> => {
     const audioPath = `./tmp/${fileName}.wav`;
     audioPlayerState.process = spawn('ffplay', ['-nodisp', '-autoexit', audioPath]);
     audioPlayerState.process.on('close', (code) => {
-      console.log(`ffplay exited with code ${code}`);
       audioPlayerState.isPlaying = false;
       resolve();
     });

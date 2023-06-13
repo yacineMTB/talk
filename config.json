@@ -1,6 +1,6 @@
 {
   "llamaModelPath": "/home/kache/models/llama/nous-hermes-13b.ggmlv3.q4_1.bin",
   "whisperModelPath": "/home/kache/models/whisper/ggml-tiny.en.bin",
-  "audioListenerScript": "sample_audio.sh",
+  "audioListenerScript": "record_audio.sh",
   "piperModelPath": "~/models/piper/en-gb-southern_english_female-low.onnx"
 }
