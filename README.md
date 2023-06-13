@@ -30,7 +30,7 @@ Is this project useful to you? Give me a [**⬆money upvote!⬆**](https://donat
 
 ### Using manual steps 
 - `npm install` 
-- Clone the submodules - `git submodule update --recursive`
+- Clone the submodules - `git submodule init && git submodule update --recursive`
 - Run `npm install` in `whisper.cpp/examples/addon.node`
 - Run `npm install` in `llama.cpp/examples/addon.node`
 - Build & run them (make sure that whisper.cpp & llama.cpp can run)
