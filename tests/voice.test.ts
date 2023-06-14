@@ -1,4 +1,4 @@
-import {playAudioFile, stopAudioPlayback, generateAudio} from '../src/voice'
+import {playAudioFile, stopAudioPlayback, generateAudio} from '../src/depedenciesLibrary/voice'
 
 async function main() {
   const fileName = await generateAudio('Hello world, this is a longer demo. I am going to keep on talking and talking and talking');
@@ -16,7 +16,6 @@ async function main() {
   setTimeout(async () => {
     stopAudioPlayback();
   }, 9000);
-
 }
 
 main();
