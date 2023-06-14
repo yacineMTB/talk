@@ -1,9 +1,7 @@
 # Talk
 ![Talk asset art](https://github.com/yacineMTB/talk/blob/master/assets/talklogo.png?raw=true)
 
-Let's build a conversational engine so we can talk to our computers!
-
-[Demo with audio](https://twitter.com/yacineMTB/status/1667739001158025216)
+Let's build a conversational engine so we can talk to our computers! [Demo with audio]([https://twitter.com/yacineMTB/status/1667739001158025216](https://twitter.com/yacineMTB/status/1668432864289882113)
 
 Is this project useful to you? Give me a [**⬆money upvote!⬆**](https://donate.stripe.com/fZedSC6tOdvF7ew9AD)
 
@@ -11,9 +9,6 @@ Is this project useful to you? Give me a [**⬆money upvote!⬆**](https://donat
 Wed Jun 14 2023
 - Talk now responds to you.
 - **Breaking change** - You're going to have to add piper to your path. See the manual steps
-
-## Next
-- TTS engine added
 
 ## Goals
 - Runs completely locally
@@ -24,6 +19,8 @@ Wed Jun 14 2023
 - Clean up the [LLaMa node cpp binding](https://github.com/yacineMTB/llama.cpp/blob/cf70f603d5a50f553c022a3017ee901afc237236/examples/addon.node/addon.cpp) I added in my forked submodule enough to merge into mainline
 
 ## Installation
+
+**The intended audience for this project at the current state is people who are comfortable with hacking things together**
 
 ### Using bundled bash script (experimental)
 
@@ -54,6 +51,7 @@ Wed Jun 14 2023
 ## Running the whole package
 - Change the `config.json` to point to `record_audio.sh` to listen from mic or `sample_audio.sh` for bundled audio examples
 - If `record_audio.sh` is selected, make sure `sox` package is install in your system. You can install it `apt install sox libsox-fmt-all`
+- Read the code! Figure out which button you'll have to press to initiate the response reflex and have the bot respond
 - `npm run start` 
 
 ## Contributing
