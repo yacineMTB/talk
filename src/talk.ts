@@ -1,6 +1,7 @@
 import { playAudioFile, generateAudio } from './depedenciesLibrary/voice'
 
 // Talk: as fast as possible
+// TODO: This should actually fire an event
 export const talk = async (prompt: string, input: string, llama: any): Promise<string> => {
   const formattedPrompt = `### Instruction:\n ${prompt} \n ### Input:\n ${input} \n ### Response:\nagent: `;
   return new Promise((resolve, reject) => {
@@ -31,7 +32,7 @@ export const talk = async (prompt: string, input: string, llama: any): Promise<s
             sentences.push(sentence);
             const promise = generateAudio(sentence);
             promisesChain = promisesChain.then(() => promise.then(playAudioFile));
-            sentenceEndRegex = /[.!?]/;  // less greedy
+            sentenceEndRegex = /[.!?]/;
             currentSentence = [];
           }
         } else {
