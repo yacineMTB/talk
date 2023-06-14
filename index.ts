@@ -37,8 +37,10 @@ const loop = async () => {
     addTranscriptionToConversation(conversation, result, Math.max(start, conversation.watermark), total_buffer_length);
     if (total_buffer_length - start >= BUFFER_LENGTH) {
       start = total_buffer_length;
-      // bug
-      await new Promise(r => setTimeout(r, 1000));
+      // TODO: Figure out a proper thresholding on byte length when starting a new transcription
+      // Waiting on enough bytes to make whisper cpp binding act nice
+      // Should might wrap the whipser inference and just set a minimum before actually providing a transcription
+      await new Promise(r => setTimeout(r, 800));
     }
   }
 }
