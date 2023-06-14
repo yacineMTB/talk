@@ -10,6 +10,7 @@ Is this project useful to you? Give me a [**⬆money upvote!⬆**](https://donat
 ### Changelog
 Wed Jun 14 2023
 - Talk now responds to you.
+- **Breaking change** - You're going to have to add piper to your path. See the manual steps
 
 ## Next
 - TTS engine added
@@ -33,7 +34,7 @@ Wed Jun 14 2023
 ** Warning: This script doesn't install piper **
 
 ### Using manual steps 
-- Get [piper](https://github.com/rhasspy/piper/), and add it to your path. This is the current TTS engine.
+- Get [piper](https://github.com/rhasspy/piper/), and add it to your path. This means calling piper, from anywhere in you system, should work. This is a TTS engine.
 - `npm install` 
 - Clone the submodules - `git submodule init && git submodule update --recursive`
 - Run `npm install` in `whisper.cpp/examples/addon.node`
