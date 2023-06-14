@@ -1,15 +1,7 @@
+import { playAudioFile, generateAudio } from './depedenciesLibrary/voice'
 
-import { stdout } from 'process';
-import readline from 'readline';
-import config from '../config.json';
-import { playAudioFile, stopAudioPlayback, generateAudio } from '../src/depedenciesLibrary/voice'
-const llama = require("../bindings/llama/llama-addon");
-
-const { llamaModelPath } = config;
-llama.init({ model: llamaModelPath });
-console.clear();
-
-const llamaInvokeWithAudio = (prompt: string, input: string): Promise<string> => {
+// Talk: as fast as possible
+export const talk = async (prompt: string, input: string, llama: any): Promise<string> => {
   const formattedPrompt = `### Instruction:\n ${prompt} \n ### Input:\n ${input} \n ### Response:\nagent: `;
   return new Promise((resolve, reject) => {
     const promptTokens: string[] = [];
@@ -29,14 +21,13 @@ const llamaInvokeWithAudio = (prompt: string, input: string): Promise<string> =>
           }
           return resolve(promisesChain.then(() => sentences.join(' ')));
         }
+
         if (promptTokensDoneEchoing) {
           token = token.replace(/[^a-zA-Z0-9 .,!?'\n-]/g, '');
-          stdout.write(token)
           currentSentence.push(token);
           // Check if the token ends a sentence.
           if (sentenceEndRegex.test(token)) {
             const sentence = currentSentence.join('');
-            // console.log(sentence);
             sentences.push(sentence);
             const promise = generateAudio(sentence);
             promisesChain = promisesChain.then(() => promise.then(playAudioFile));
@@ -56,17 +47,3 @@ const llamaInvokeWithAudio = (prompt: string, input: string): Promise<string> =>
     });
   });
 }
-
-// TODO: Renable resposne reflex, and abstract away
-readline.emitKeypressEvents(process.stdin);
-process.stdin.setRawMode(true);
-process.stdin.on('keypress', async (str, key) => {
-  if (key.sequence === '\u0003') {
-    process.exit();
-  }
-  // R for respond
-  if (key.sequence === 'r') {
-    console.log('I hit r on my keeb. BANG!! Response begins!!')
-    await llamaInvokeWithAudio('Tell me something interesting about the thing in the input. Start with a sentence. This is conversational. First sentence should be a simple precanned response, like "this is an interesting question". The first sentence you say should always be less than three words. the first sentence MUST be less than three words. Then, say some more sentences.', 'Are you as big of a fan of draco malfoy as me?');
-  }
-});

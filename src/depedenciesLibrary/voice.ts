@@ -1,6 +1,6 @@
 import { spawn, ChildProcessWithoutNullStreams, exec } from 'child_process';
 import { v4 as uuidv4 } from 'uuid';
-import config from '../config.json';
+import config from '../../config.json';
 import fs from 'fs';
 const { piperModelPath } = config;
 

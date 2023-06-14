@@ -7,6 +7,9 @@ Let's build a conversational engine so we can talk to our computers!
 
 Is this project useful to you? Give me a [**⬆money upvote!⬆**](https://donate.stripe.com/fZedSC6tOdvF7ew9AD)
 
+### Changelog
+Wed Jun 14 2023
+- Talk now responds to you.
 
 ## Next
 - TTS engine added
@@ -27,8 +30,10 @@ Is this project useful to you? Give me a [**⬆money upvote!⬆**](https://donat
 `./build.sh`
 
 ** WARNING:The bash script will move the existing `config.json` file to `config.json.bkp` and create a new one instead. **
+** Warning: This script doesn't install piper **
 
 ### Using manual steps 
+- Get [piper](https://github.com/rhasspy/piper/), and add it to your path. This is the current TTS engine.
 - `npm install` 
 - Clone the submodules - `git submodule init && git submodule update --recursive`
 - Run `npm install` in `whisper.cpp/examples/addon.node`
