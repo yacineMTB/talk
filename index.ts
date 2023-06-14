@@ -128,7 +128,6 @@ const responseReflexEventHandler = async (conversation: Conversation): Promise<v
   const userTranscriptionSinceWatermark = getTranscriptionSinceWatermark(conversation);
 
   const inputData = getLlamaInputData(conversation);
-  console.log(inputData)
   globalLlamaPromise = talk(
     "Be extremely terse. Simulate the next step in a role playing conversation. Only respond with a single sentence." +
     "'agent' represents you. Don't use lists, only use english sentences. Only use UTF-8 characters." +
@@ -145,6 +144,8 @@ const responseReflexEventHandler = async (conversation: Conversation): Promise<v
   const agentSpeech: Speech = { speaker: "agent", response: mostRecentTranscription.precannedLLMResponse || '' };
   conversation.watermark = mostRecentTranscription.endByte;
   conversation.canonicalDialogue.push(agentSpeech);
+  console.log('response completed: ');
+  console.log(conversation.canonicalDialogue);
 }
 
 const newTranscriptionEventHandler = async (transcription: Transcription): Promise<void> => {
