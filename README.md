@@ -30,10 +30,12 @@ Is this project useful to you? Give me a [**⬆money upvote!⬆**](https://donat
 
 ### Using manual steps 
 - `npm install` 
-- Clone the submodules - `git submodule update --recursive`
+- Clone the submodules - `git submodule init && git submodule update --recursive`
 - Run `npm install` in `whisper.cpp/examples/addon.node`
 - Run `npm install` in `llama.cpp/examples/addon.node`
 - Build & run them (make sure that whisper.cpp & llama.cpp can run)
+  -  `cd whisper.cpp && make`
+  -  `cd llama.cpp && make`
 - In whisper.cpp git submodule `npx cmake-js compile --CDWHISPER_CUBLAS="ON" -T whisper-addon -B Release && cp -r ./build/Release  /home/kache/attractor/talk/conversation/build/whisper`
 - Note that the above command has --CDWHISPER_CUBLAS=ON. Change that depending on the build parameters you want for your whisper engine. cmake-js can take cmake flags using --CD{The flag you want}. I'm using CUBLAS=ON because I'm on a 3090. Drop it if you're on a macbook. 
 - Move the created `./whisper.cpp/build/Relase contents` to `./bindings/whisper/whisper-addon`
