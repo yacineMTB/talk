@@ -1,4 +1,3 @@
-
 export const llamaInvoke = (prompt: string, input: string, llama: any): Promise<string> => {
   const formattedPrompt = `# Instruction:\n ${prompt} \n # Input:\n ${input} \n # Response:\nagent:\n`;
   return new Promise((resolve, reject) => {
