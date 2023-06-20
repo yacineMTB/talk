@@ -1,20 +1,11 @@
 import { spawn } from 'child_process';
 import readline from 'readline';
 import config from './config.json';
-const { llamaModelPath, whisperModelPath, audioListenerScript } = config;
+const { whisperModelPath, audioListenerScript } = config;
 import { talk } from './src/talk';
 
 const whisper = require('./bindings/whisper/whisper-addon');
-const llama = require("./bindings/llama/llama-addon");
-
 // INIT GGML CPP BINDINGS
-// TODO: these should return initialized object
-if ('lora' in config) {
-  const lora = config.lora;
-  llama.init({ model: llamaModelPath, lora: lora });
-} else {
-  llama.init({ model: llamaModelPath });
-}
 whisper.init(whisperModelPath);
 
 let globalLlamaPromise: Promise<string>;
@@ -120,22 +111,20 @@ const conversation: Conversation = {
   watermark: 0,
 }
 
-conversation.canonicalDialogue.push({ speaker: 'agent', response: "Hey yacine! long time no see. How have you been?" });
-conversation.canonicalDialogue.push({ speaker: 'user', response: "Alice! It's been ages. I've been good, quite busy with work though. And you?" });
+conversation.canonicalDialogue.push({ speaker: 'agent', response: "Hey! long time no see. How have you been?" });
+conversation.canonicalDialogue.push({ speaker: 'user', response: "It's been ages. I've been good, quite busy with work though. And you?" });
 conversation.canonicalDialogue.push({ speaker: 'agent', response: "Pretty much the same here. Busy, busy. I've started reading manga and watahcing anime, it's really therapeutic." });
 
 // EVENTS
 const responseReflexEventHandler = async (conversation: Conversation): Promise<void> => {
   const mostRecentTranscription = conversation.transcriptions[conversation.transcriptions.length - 1];
   const userTranscriptionSinceWatermark = getTranscriptionSinceWatermark(conversation);
-
   const inputData = getLlamaInputData(conversation);
   globalLlamaPromise = talk(
     "Be extremely terse. Simulate the next step in a role playing conversation. Only respond with a single sentence." +
     "'agent' represents you. Don't use lists, only use english sentences. Only use UTF-8 characters." +
     "Keep the conversation going! Your name is alice. Only speak for alice, preceded with 'agent: '. What does alice say next?",
-    inputData,
-    llama
+    inputData
   );
   const result: string = await globalLlamaPromise;
   mostRecentTranscription.precannedLLMResponse = result;
@@ -168,8 +157,6 @@ process.stdin.setRawMode(true);
 process.stdin.on('keypress', async (str, key) => {
   // Detect Ctrl+C and manually emit SIGINT to preserve default behavior
   if (key.sequence === '\u0003') {
-    // Lurk
-    // The reason I wait for these promises is because ggml core dumps when you do it in the middle of an infer
     await Promise.all([globalLlamaPromise, globalWhisperPromise]);
     process.exit();
   }

@@ -1,27 +1,34 @@
-export const llamaInvoke = (prompt: string, input: string, llama: any): Promise<string> => {
+import axios from 'axios';
+
+const API_URL = 'http://127.0.0.1:8080'
+
+export const llamaInvoke = (prompt: string, input: string, onDataFunction: (data: string) => void): Promise<string> => {
   const formattedPrompt = `# Instruction:\n ${prompt} \n # Input:\n ${input} \n # Response:\nagent:\n`;
-  return new Promise((resolve, reject) => {
-    const promptTokens: string[] = [];
-    let promptTokensDoneEchoing: boolean = false;
-    const tokens: string[] = [];
-    llama.startAsync({
-      prompt: formattedPrompt,
-      listener: (token: string) => {
-        if (token === '[end of text]') {
-          return resolve(tokens.join(''));
-        }
-        if (promptTokensDoneEchoing) {
-          tokens.push(token);
-        } else {
-          promptTokens.push(token)
-        }
-        // TODO: The trim is leak from llama tokenizer inside the cpp
-        // Ideally the cpp binding can take an option on whether to echo prompt tokens or not 
-        // so I don't have to leak the lurk in here
-        if (!promptTokensDoneEchoing && promptTokens.join('').trim() === formattedPrompt.trim()) {
-          promptTokensDoneEchoing = true;
-        }
+  let answer = '';
+  return new Promise(async (resolve, reject) => {
+    const response = await axios({
+      method: 'post',
+      url: `${API_URL}/completion`,
+      data: {
+        prompt: formattedPrompt,
+        temperature: 0.2,
+        top_k: 40,
+        top_p: 0.9,
+        // n_predict: 256,
+        stream: true
+      },
+      responseType: 'stream',
+    });
+    response.data.on('data', (data: string) => {
+      const t = Buffer.from(data).toString('utf8');
+      if (t.startsWith('data: ')) {
+        const message = JSON.parse(t.substring(6))
+        answer += message.content;
+        onDataFunction(message.content)
       }
+    });
+    response.data.on('end', () => {
+      resolve(answer);
     });
   });
 }
