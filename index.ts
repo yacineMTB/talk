@@ -11,24 +11,17 @@ whisper.init(whisperModelPath);
 let globalLlamaPromise: Promise<string>;
 let globalWhisperPromise: Promise<string>;
 
-// CONVERSATION STATE DEFINITION
-type SpeakerType = 'user' | 'agent';
-interface Speech {
-  speaker: SpeakerType;
-  response: string;
-}
-
 // CONSTANTS
 const SAMPLING_RATE = 16000;
 const CHANNELS = 1;
 const BIT_DEPTH = 16;
 const ONE_SECOND = SAMPLING_RATE * (BIT_DEPTH / 8) * CHANNELS;
-const BUFFER_LENGTH_SECONDS = 4;
+const BUFFER_LENGTH_SECONDS = 28;
 const BUFFER_LENGTH_MS = BUFFER_LENGTH_SECONDS * 1000;
 const BUFFER_LENGTH = ONE_SECOND * BUFFER_LENGTH_SECONDS;
 
 // INTERFACES
-type EventType = 'audioBytes' | 'responseReflex' | 'transcription' | 'cutTranscription';
+type EventType = 'audioBytes' | 'responseReflex' | 'transcription' | 'cutTranscription' | 'talk';
 interface Event {
   eventType: EventType;
   timestamp: number;
@@ -42,7 +35,9 @@ interface AudioBytesEvent extends Event {
 }
 interface ResponseReflexEvent extends Event {
   eventType: 'responseReflex';
-  data: {}
+  data: {
+    transcription: string
+  }
 }
 interface TranscriptionEvent extends Event {
   eventType: 'transcription';
@@ -60,7 +55,12 @@ interface CutTranscriptionEvent extends Event {
     lastAudioByteEventTimestamp: number;
   }
 }
-
+interface TalkEvent extends Event {
+  eventType: 'talk';
+  data: {
+    response: string;
+  }
+}
 interface EventLog {
   events: Event[];
 }
@@ -69,12 +69,22 @@ const eventlog: EventLog = {
 };
 
 // EVENTLOG UTILITY FUNCTIONS
-
 // From the event log, get the transcription so far
+const getLastTranscriptionEvent = (): TranscriptionEvent => {
+  const transcriptionEvents = eventlog.events.filter(e => e.eventType === 'transcription');
+  return transcriptionEvents[transcriptionEvents.length - 1] as TranscriptionEvent;
+}
+const getCutTimestamp = (): number => {
+  const cutTranscriptionEvents = eventlog.events.filter(e => e.eventType === 'cutTranscription');
+  const lastCut = cutTranscriptionEvents.length > 0 ? cutTranscriptionEvents[cutTranscriptionEvents.length - 1].data.lastAudioByteEventTimestamp : eventlog.events[0].timestamp;
+  const responseReflexEvents = eventlog.events.filter(e => e.eventType === 'responseReflex');
+  const lastResponseReflex = responseReflexEvents.length > 0 ? responseReflexEvents[responseReflexEvents.length - 1].timestamp : eventlog.events[0].timestamp;
+  return Math.max(lastResponseReflex, lastCut);
+
+}
 const getTransciptionSoFar = (): string => {
   const cutTranscriptionEvents = eventlog.events.filter(e => e.eventType === 'cutTranscription');
-  const transcriptionEvents = eventlog.events.filter(e => e.eventType === 'transcription');
-  const lastTranscriptionEvent = transcriptionEvents[transcriptionEvents.length - 1];
+  const lastTranscriptionEvent = getLastTranscriptionEvent();
   const lastCutTranscriptionEvent = cutTranscriptionEvents[cutTranscriptionEvents.length - 1];
   let transcription = cutTranscriptionEvents.map(e => e.data.transcription).join(' ');
   if (!lastCutTranscriptionEvent || lastCutTranscriptionEvent.timestamp !== lastTranscriptionEvent.timestamp) {
@@ -89,13 +99,11 @@ const getDialogue = (): string => {
   `;
 }
 
-const updateScreenEvents: Set<EventType> = new Set(['responseReflex', 'transcription'])
+// const updateScreenEvents: Set<EventType> = new Set([])
+const updateScreenEvents: Set<EventType> = new Set(['responseReflex', 'cutTranscription', 'talk'])
 const updateScreen = (event: Event) => {
   if (updateScreenEvents.has(event.eventType)) {
-    console.clear();
-    const lastEvent = event.eventType;
-    const transcription = getTransciptionSoFar();
-    console.log({transcription, lastEvent});
+    console.log(event);
   }
 }
 
@@ -125,9 +133,7 @@ const newAudioBytesEvent = (buffer: Buffer): void => {
 let transcriptionMutex = false;
 const transcriptionEventHandler = async (event: AudioBytesEvent) => {
   // TODO: Unbounded linear growth. Instead, walk backwards or something.
-  const cutTranscriptionEvents = eventlog.events.filter(e => e.eventType === 'cutTranscription');
-  const lastCut = cutTranscriptionEvents.length > 0 ? cutTranscriptionEvents[cutTranscriptionEvents.length - 1].data.lastAudioByteEventTimestamp : eventlog.events[0].timestamp;
-
+  const lastCut = getCutTimestamp();
   const audioBytesEvents = eventlog.events.filter(e => e.eventType === 'audioBytes' && e.timestamp >= lastCut);
   const joinedBuffer = Buffer.concat(
     audioBytesEvents.map((event) => event.data.buffer)
@@ -137,7 +143,8 @@ const transcriptionEventHandler = async (event: AudioBytesEvent) => {
   // Therefore fix whisper
   if (!transcriptionMutex && joinedBuffer.length > ONE_SECOND) {
     transcriptionMutex = true;
-    const transcription = await whisper.whisperInferenceOnBytes(joinedBuffer);
+    globalWhisperPromise = whisper.whisperInferenceOnBytes(joinedBuffer);
+    const transcription = await globalWhisperPromise;
     const transcriptionEvent: TranscriptionEvent = {
       timestamp: Number(Date.now()),
       eventType: 'transcription',
@@ -170,21 +177,36 @@ const cutTranscriptionEventHandler = async (event: TranscriptionEvent) => {
   }
 }
 
-const responseReflexEventHandler = (): void => {
+const responseReflexEventHandler = async (): Promise<void> => {
+  await globalWhisperPromise;
   const responseReflexEvent: ResponseReflexEvent = {
     timestamp: Number(Date.now()),
     eventType: 'responseReflex',
-    data: {}
+    data: {
+      transcription: getTransciptionSoFar()
+    }
   }
-  const dialogue = getDialogue();
+  newEventHandler(responseReflexEvent);
+}
+
+const talkEventHandler = (event: ResponseReflexEvent): void => {
+  const talkCallback = (sentence: string) => {
+    const talkEvent : TalkEvent = {
+      timestamp: Number(Date.now()),
+      eventType: 'talk',
+      data: {
+        response: sentence 
+      }
+    }
+    newEventHandler(talkEvent);
+  };
   talk(
     "Be extremely terse. Simulate the next step in a role playing conversation. Only respond with a single sentence." +
     "'agent' represents you. Don't use lists, only use english sentences. Only use UTF-8 characters." +
     "Keep the conversation going!  Only speak for 'agent', preceded with 'agent: '. What does agent say next?",
-    dialogue
+    event.data.transcription,
+    talkCallback
   );
-
-  newEventHandler(responseReflexEvent);
 }
 
 // Defines the DAG through which events trigger each other
@@ -195,11 +217,14 @@ const eventDag: { [key in EventType]: { [key in EventType]?: (event: any) => voi
   audioBytes: {
     transcription: transcriptionEventHandler,
   },
-  responseReflex: {},
+  responseReflex: {
+    talk: talkEventHandler,
+  },
   transcription: {
     cutTranscription: cutTranscriptionEventHandler,
   },
   cutTranscription: {},
+  talk: {},
 }
 
 const audioProcess = spawn('bash', [audioListenerScript]);

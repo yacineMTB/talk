@@ -2,7 +2,7 @@ import { playAudioFile, generateAudio } from './depedenciesLibrary/voice'
 import { llamaInvoke } from './depedenciesLibrary/llm';
 
 // Talk: Greedily generate audio while completing an LLM inference
-export const talk = async (prompt: string, input: string): Promise<string> => {
+export const talk = async (prompt: string, input: string, sentenceCallback: (sentence: string) => void): Promise<string> => {
   let sentenceEndRegex = /[.!?,;]/;  // Adjust as necessary.
   let promisesChain = Promise.resolve();
 
@@ -17,7 +17,10 @@ export const talk = async (prompt: string, input: string): Promise<string> => {
       const sentence = currentSentence.join('');
       sentences.push(sentence);
       const promise = generateAudio(sentence);
-      promisesChain = promisesChain.then(() => promise.then(playAudioFile));
+      promisesChain = promisesChain.then(async () => { 
+        await promise.then(playAudioFile);
+        sentenceCallback(sentence);
+      });
       sentenceEndRegex = /[.!?]/;
       currentSentence = [];
     }
