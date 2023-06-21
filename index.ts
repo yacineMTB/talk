@@ -8,7 +8,6 @@ const whisper = require('./bindings/whisper/whisper-addon');
 // INIT GGML CPP BINDINGS
 whisper.init(whisperModelPath);
 
-let globalLlamaPromise: Promise<string>;
 let globalWhisperPromise: Promise<string>;
 
 // CONSTANTS
@@ -18,7 +17,6 @@ const BIT_DEPTH = 16;
 const ONE_SECOND = SAMPLING_RATE * (BIT_DEPTH / 8) * CHANNELS;
 const BUFFER_LENGTH_SECONDS = 28;
 const BUFFER_LENGTH_MS = BUFFER_LENGTH_SECONDS * 1000;
-const BUFFER_LENGTH = ONE_SECOND * BUFFER_LENGTH_SECONDS;
 
 // INTERFACES
 type EventType = 'audioBytes' | 'responseReflex' | 'transcription' | 'cutTranscription' | 'talk';
@@ -92,17 +90,39 @@ const getTransciptionSoFar = (): string => {
   }
   return transcription
 }
-
 const getDialogue = (): string => {
-  const transcription = getTransciptionSoFar();
-  return `User: ${transcription}
-  `;
+  const dialogueEvents = eventlog.events
+    .filter(e => e.eventType === 'responseReflex' || e.eventType === 'talk');
+
+  let result = [];
+  let lastType = null;
+  let mergedText = '';
+
+  for (let e of dialogueEvents) {
+    const currentSpeaker = e.eventType === 'responseReflex' ? 'alice' : 'bob';
+    const currentText = e.eventType === 'responseReflex' ? e.data.transcription : e.data.response;
+
+    if (lastType && lastType === currentSpeaker) {
+      mergedText += ' ' + currentText;
+    } else {
+      if (mergedText) result.push(mergedText);
+      mergedText = `${currentSpeaker}: ${currentText}`;
+    }
+
+    lastType = currentSpeaker;
+  }
+
+  // push last merged text
+  if (mergedText) result.push(mergedText);
+
+  return result.join('\n');
 }
 
 // const updateScreenEvents: Set<EventType> = new Set([])
 const updateScreenEvents: Set<EventType> = new Set(['responseReflex', 'cutTranscription', 'talk'])
 const updateScreen = (event: Event) => {
   if (updateScreenEvents.has(event.eventType)) {
+    console.log(getDialogue())
     console.log(event);
   }
 }
@@ -191,20 +211,19 @@ const responseReflexEventHandler = async (): Promise<void> => {
 
 const talkEventHandler = (event: ResponseReflexEvent): void => {
   const talkCallback = (sentence: string) => {
-    const talkEvent : TalkEvent = {
+    const talkEvent: TalkEvent = {
       timestamp: Number(Date.now()),
       eventType: 'talk',
       data: {
-        response: sentence 
+        response: sentence.trim()
       }
     }
     newEventHandler(talkEvent);
   };
+  const input = getDialogue();
   talk(
-    "Be extremely terse. Simulate the next step in a role playing conversation. Only respond with a single sentence." +
-    "'agent' represents you. Don't use lists, only use english sentences. Only use UTF-8 characters." +
-    "Keep the conversation going!  Only speak for 'agent', preceded with 'agent: '. What does agent say next?",
-    event.data.transcription,
+    "Continue the dialogue, speak for bob only. \nMake it a fun lighthearted conversation.",
+    input,
     talkCallback
   );
 }
@@ -213,6 +232,7 @@ const talkEventHandler = (event: ResponseReflexEvent): void => {
 // Implicitly used by newEventHandler to spawn the correct downstream event handler
 // All event spawners call newEventHandler
 // newEventHandler adds the new event to event log
+// This is actually not great. Might just have it be implicit.
 const eventDag: { [key in EventType]: { [key in EventType]?: (event: any) => void } } = {
   audioBytes: {
     transcription: transcriptionEventHandler,
@@ -240,7 +260,7 @@ process.stdin.setRawMode(true);
 process.stdin.on('keypress', async (str, key) => {
   // Detect Ctrl+C and manually emit SIGINT to preserve default behavior
   if (key.sequence === '\u0003') {
-    await Promise.all([globalLlamaPromise, globalWhisperPromise]);
+    await Promise.all([globalWhisperPromise]);
     process.exit();
   }
 
