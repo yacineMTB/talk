@@ -1,69 +1,14 @@
 import { spawn } from 'child_process';
 import readline from 'readline';
 import config from './config.json';
-const { llamaModelPath, whisperModelPath, audioListenerScript } = config;
+const { whisperModelPath, audioListenerScript } = config;
 import { talk } from './src/talk';
 
 const whisper = require('./bindings/whisper/whisper-addon');
-const llama = require("./bindings/llama/llama-addon");
-
 // INIT GGML CPP BINDINGS
-// TODO: these should return initialized object
-if ('lora' in config) {
-  const lora = config.lora;
-  llama.init({ model: llamaModelPath, lora: lora });
-} else {
-  llama.init({ model: llamaModelPath });
-}
 whisper.init(whisperModelPath);
 
-let globalLlamaPromise: Promise<string>;
 let globalWhisperPromise: Promise<string>;
-
-// Main loop
-const loop = async () => {
-  // TODO: Figure out why segfault occurs when no waiting
-  // Likely a hint in the original whisper cpp napi addon code
-  // I presume the cause is init func early return?
-  await new Promise(r => setTimeout(r, 2000));
-  let start = 0;
-
-  while (true) {
-    const total_buffer_length = conversation.audioBuffer.length;
-    const audioSlice = conversation.audioBuffer.slice(Math.max(start, conversation.watermark), total_buffer_length);
-    const minWait = new Promise(r => setTimeout(r, 100));
-    globalWhisperPromise = whisper.whisperInferenceOnBytes(audioSlice);
-    const [result] = await Promise.all([globalWhisperPromise, minWait]);
-    addTranscriptionToConversation(conversation, result, Math.max(start, conversation.watermark), total_buffer_length);
-    if (total_buffer_length - start >= BUFFER_LENGTH) {
-      start = total_buffer_length;
-      // TODO: Figure out a proper thresholding on byte length when starting a new transcription
-      // Waiting on enough bytes to make whisper cpp binding act nice
-      // Should might wrap the whipser inference and just set a minimum before actually providing a transcription
-      await new Promise(r => setTimeout(r, 800));
-    }
-  }
-}
-loop();
-
-// CONVERSATION STATE DEFINITION
-interface Transcription {
-  text: string;
-  startByte: number;
-  endByte: number;
-  precannedLLMResponse?: string;
-}
-type Speaker = 'user' | 'agent';
-interface Speech {
-  speaker: Speaker;
-  response: string;
-}
-interface Conversation {
-  audioBuffer: Buffer;
-  transcriptions: Transcription[];
-  canonicalDialogue: Speech[];
-  watermark: number;
-}
 
 // CONSTANTS
 const SAMPLING_RATE = 16000;
@@ -71,95 +16,242 @@ const CHANNELS = 1;
 const BIT_DEPTH = 16;
 const ONE_SECOND = SAMPLING_RATE * (BIT_DEPTH / 8) * CHANNELS;
 const BUFFER_LENGTH_SECONDS = 28;
-const BUFFER_LENGTH = ONE_SECOND * BUFFER_LENGTH_SECONDS;
+const BUFFER_LENGTH_MS = BUFFER_LENGTH_SECONDS * 1000;
 
-// CONVERSATION STATE FUNCTIONS
-const addAudioDataToConversation = (conversation: Conversation, data: Buffer) => {
-  conversation.audioBuffer = Buffer.concat([conversation.audioBuffer, data]);
+// INTERFACES
+type EventType = 'audioBytes' | 'responseReflex' | 'transcription' | 'cutTranscription' | 'talk';
+interface Event {
+  eventType: EventType;
+  timestamp: number;
+  data: { [key: string]: any };
 }
-const addTranscriptionToConversation = (conversation: Conversation, text: string, startByte: number, endByte: number) => {
-  const lastTranscription = conversation.transcriptions[conversation.transcriptions.length - 1];
-  if (!lastTranscription || lastTranscription.text !== text) {
-    newTranscriptionEventHandler({ startByte, endByte, text })
-    conversation.transcriptions.push({ startByte, endByte, text });
+interface AudioBytesEvent extends Event {
+  eventType: 'audioBytes';
+  data: {
+    buffer: Buffer;
   }
 }
-const getTranscriptionSinceWatermark = (conversation: Conversation) => {
-  const { watermark, transcriptions } = conversation;
-  const sortedTranscriptions = [...transcriptions].sort((a, b) => b.endByte - a.endByte);
-  let transcriptionTexts = [];
-  const seenStartBytes = new Set();
-
-  for (let transcription of sortedTranscriptions) {
-    if (transcription.startByte < watermark) {
-      break;
-    }
-    if (!seenStartBytes.has(transcription.startByte)) {
-      seenStartBytes.add(transcription.startByte);
-      transcriptionTexts.push(transcription.text);
-    }
+interface ResponseReflexEvent extends Event {
+  eventType: 'responseReflex';
+  data: {
+    transcription: string
   }
-
-  const result = transcriptionTexts.reverse().join(' ');
-  return result.trim();
+}
+interface TranscriptionEvent extends Event {
+  eventType: 'transcription';
+  data: {
+    buffer: Buffer;
+    transcription: string;
+    lastAudioByteEventTimestamp: number;
+  }
+}
+interface CutTranscriptionEvent extends Event {
+  eventType: 'cutTranscription';
+  data: {
+    buffer: Buffer;
+    transcription: string;
+    lastAudioByteEventTimestamp: number;
+  }
+}
+interface TalkEvent extends Event {
+  eventType: 'talk';
+  data: {
+    response: string;
+  }
+}
+interface EventLog {
+  events: Event[];
+}
+const eventlog: EventLog = {
+  events: []
 };
 
-const getLlamaInputData = (conversation: Conversation): string => {
-  const transcriptionSinceWatermark = getTranscriptionSinceWatermark(conversation);
-  const userSpeech: Speech = { speaker: "user", response: transcriptionSinceWatermark };
-  return [...conversation.canonicalDialogue.slice(-4), userSpeech]
-    .map((speech) => `${speech.speaker}: ${speech.response}`)
-    .join('\n');
+// EVENTLOG UTILITY FUNCTIONS
+// From the event log, get the transcription so far
+const getLastTranscriptionEvent = (): TranscriptionEvent => {
+  const transcriptionEvents = eventlog.events.filter(e => e.eventType === 'transcription');
+  return transcriptionEvents[transcriptionEvents.length - 1] as TranscriptionEvent;
+}
+const getCutTimestamp = (): number => {
+  const cutTranscriptionEvents = eventlog.events.filter(e => e.eventType === 'cutTranscription');
+  const lastCut = cutTranscriptionEvents.length > 0 ? cutTranscriptionEvents[cutTranscriptionEvents.length - 1].data.lastAudioByteEventTimestamp : eventlog.events[0].timestamp;
+  const responseReflexEvents = eventlog.events.filter(e => e.eventType === 'responseReflex');
+  const lastResponseReflex = responseReflexEvents.length > 0 ? responseReflexEvents[responseReflexEvents.length - 1].timestamp : eventlog.events[0].timestamp;
+  return Math.max(lastResponseReflex, lastCut);
+
+}
+const getTransciptionSoFar = (): string => {
+  const cutTranscriptionEvents = eventlog.events.filter(e => e.eventType === 'cutTranscription');
+  const lastTranscriptionEvent = getLastTranscriptionEvent();
+  const lastCutTranscriptionEvent = cutTranscriptionEvents[cutTranscriptionEvents.length - 1];
+  let transcription = cutTranscriptionEvents.map(e => e.data.transcription).join(' ');
+  if (!lastCutTranscriptionEvent || lastCutTranscriptionEvent.timestamp !== lastTranscriptionEvent.timestamp) {
+    transcription = transcription + (lastTranscriptionEvent?.data?.transcription || '')
+  }
+  return transcription
+}
+const getDialogue = (): string => {
+  const dialogueEvents = eventlog.events
+    .filter(e => e.eventType === 'responseReflex' || e.eventType === 'talk');
+
+  let result = [];
+  let lastType = null;
+  let mergedText = '';
+
+  for (let e of dialogueEvents) {
+    const currentSpeaker = e.eventType === 'responseReflex' ? 'alice' : 'bob';
+    const currentText = e.eventType === 'responseReflex' ? e.data.transcription : e.data.response;
+
+    if (lastType && lastType === currentSpeaker) {
+      mergedText += ' ' + currentText;
+    } else {
+      if (mergedText) result.push(mergedText);
+      mergedText = `${currentSpeaker}: ${currentText}`;
+    }
+
+    lastType = currentSpeaker;
+  }
+
+  // push last merged text
+  if (mergedText) result.push(mergedText);
+
+  return result.join('\n');
 }
 
-//  INITIALIZE STATE
-const conversation: Conversation = {
-  audioBuffer: Buffer.alloc(0),
-  transcriptions: [],
-  canonicalDialogue: [],
-  watermark: 0,
+// const updateScreenEvents: Set<EventType> = new Set([])
+const updateScreenEvents: Set<EventType> = new Set(['responseReflex', 'cutTranscription', 'talk'])
+const updateScreen = (event: Event) => {
+  if (updateScreenEvents.has(event.eventType)) {
+    console.log(getDialogue())
+    console.log(event);
+  }
 }
-
-conversation.canonicalDialogue.push({ speaker: 'agent', response: "Hey yacine! long time no see. How have you been?" });
-conversation.canonicalDialogue.push({ speaker: 'user', response: "Alice! It's been ages. I've been good, quite busy with work though. And you?" });
-conversation.canonicalDialogue.push({ speaker: 'agent', response: "Pretty much the same here. Busy, busy. I've started reading manga and watahcing anime, it's really therapeutic." });
 
 // EVENTS
-const responseReflexEventHandler = async (conversation: Conversation): Promise<void> => {
-  const mostRecentTranscription = conversation.transcriptions[conversation.transcriptions.length - 1];
-  const userTranscriptionSinceWatermark = getTranscriptionSinceWatermark(conversation);
+const newEventHandler = (event: Event): void => {
+  eventlog.events.push(event);
+  updateScreen(event)
+  const downstreamEvents = eventDag[event.eventType];
+  for (const downstreamEvent in downstreamEvents) {
+    const downstreamEventFn = downstreamEvents[downstreamEvent as EventType];
+    // Note: Unecessary existence check, this is typesafe
+    if (downstreamEventFn) {
+      downstreamEventFn(event);
+    }
+  }
+}
 
-  const inputData = getLlamaInputData(conversation);
-  globalLlamaPromise = talk(
-    "Be extremely terse. Simulate the next step in a role playing conversation. Only respond with a single sentence." +
-    "'agent' represents you. Don't use lists, only use english sentences. Only use UTF-8 characters." +
-    "Keep the conversation going! Your name is alice. Only speak for alice, preceded with 'agent: '. What does alice say next?",
-    inputData,
-    llama
+const newAudioBytesEvent = (buffer: Buffer): void => {
+  const audioBytesEvent: AudioBytesEvent = {
+    timestamp: Number(Date.now()),
+    eventType: 'audioBytes',
+    data: { buffer }
+  }
+  newEventHandler(audioBytesEvent);
+}
+
+let transcriptionMutex = false;
+const transcriptionEventHandler = async (event: AudioBytesEvent) => {
+  // TODO: Unbounded linear growth. Instead, walk backwards or something.
+  const lastCut = getCutTimestamp();
+  const audioBytesEvents = eventlog.events.filter(e => e.eventType === 'audioBytes' && e.timestamp >= lastCut);
+  const joinedBuffer = Buffer.concat(
+    audioBytesEvents.map((event) => event.data.buffer)
   );
-  const result: string = await globalLlamaPromise;
-  mostRecentTranscription.precannedLLMResponse = result;
 
-  const userSpeech: Speech = { speaker: "user", response: userTranscriptionSinceWatermark };
-  conversation.canonicalDialogue.push(userSpeech);
-
-  const agentSpeech: Speech = { speaker: "agent", response: mostRecentTranscription.precannedLLMResponse || '' };
-  conversation.watermark = mostRecentTranscription.endByte;
-  conversation.canonicalDialogue.push(agentSpeech);
-  console.log('response completed: ');
-  console.log(conversation.canonicalDialogue);
+  // TODO: Wait for 1s, because whisper bindings currently throw out if not enough audio passed in
+  // Therefore fix whisper
+  if (!transcriptionMutex && joinedBuffer.length > ONE_SECOND) {
+    transcriptionMutex = true;
+    globalWhisperPromise = whisper.whisperInferenceOnBytes(joinedBuffer);
+    const transcription = await globalWhisperPromise;
+    const transcriptionEvent: TranscriptionEvent = {
+      timestamp: Number(Date.now()),
+      eventType: 'transcription',
+      data: {
+        buffer: joinedBuffer,
+        transcription,
+        lastAudioByteEventTimestamp: audioBytesEvents[audioBytesEvents.length - 1].timestamp
+      }
+    }
+    newEventHandler(transcriptionEvent);
+    transcriptionMutex = false;
+  }
 }
 
-const newTranscriptionEventHandler = async (transcription: Transcription): Promise<void> => {
-  console.log('new transcription event' + JSON.stringify(transcription));
+const cutTranscriptionEventHandler = async (event: TranscriptionEvent) => {
+  const cutTranscriptionEvents = eventlog.events.filter(e => e.eventType === 'cutTranscription');
+  const lastCut = cutTranscriptionEvents.length > 0 ? cutTranscriptionEvents[cutTranscriptionEvents.length - 1].timestamp : eventlog.events[0].timestamp;
+  const timeDiff = event.timestamp - lastCut;
+  if (timeDiff > BUFFER_LENGTH_MS) {
+    const cutTranscriptionEvent: CutTranscriptionEvent = {
+      timestamp: event.timestamp,
+      eventType: 'cutTranscription',
+      data: {
+        buffer: event.data.buffer,
+        transcription: event.data.transcription,
+        lastAudioByteEventTimestamp: event.data.lastAudioByteEventTimestamp
+      }
+    }
+    newEventHandler(cutTranscriptionEvent);
+  }
 }
 
-// Register events
+const responseReflexEventHandler = async (): Promise<void> => {
+  await globalWhisperPromise;
+  const responseReflexEvent: ResponseReflexEvent = {
+    timestamp: Number(Date.now()),
+    eventType: 'responseReflex',
+    data: {
+      transcription: getTransciptionSoFar()
+    }
+  }
+  newEventHandler(responseReflexEvent);
+}
+
+const talkEventHandler = (event: ResponseReflexEvent): void => {
+  const talkCallback = (sentence: string) => {
+    const talkEvent: TalkEvent = {
+      timestamp: Number(Date.now()),
+      eventType: 'talk',
+      data: {
+        response: sentence.trim()
+      }
+    }
+    newEventHandler(talkEvent);
+  };
+  const input = getDialogue();
+  talk(
+    "Continue the dialogue, speak for bob only. \nMake it a fun lighthearted conversation.",
+    input,
+    talkCallback
+  );
+}
+
+// Defines the DAG through which events trigger each other
+// Implicitly used by newEventHandler to spawn the correct downstream event handler
+// All event spawners call newEventHandler
+// newEventHandler adds the new event to event log
+// This is actually not great. Might just have it be implicit.
+const eventDag: { [key in EventType]: { [key in EventType]?: (event: any) => void } } = {
+  audioBytes: {
+    transcription: transcriptionEventHandler,
+  },
+  responseReflex: {
+    talk: talkEventHandler,
+  },
+  transcription: {
+    cutTranscription: cutTranscriptionEventHandler,
+  },
+  cutTranscription: {},
+  talk: {},
+}
+
 const audioProcess = spawn('bash', [audioListenerScript]);
 audioProcess.stdout.on('readable', () => {
   let data;
   while (data = audioProcess.stdout.read()) {
-    addAudioDataToConversation(conversation, data);
+    newAudioBytesEvent(data);
   }
 });
 
@@ -168,14 +260,12 @@ process.stdin.setRawMode(true);
 process.stdin.on('keypress', async (str, key) => {
   // Detect Ctrl+C and manually emit SIGINT to preserve default behavior
   if (key.sequence === '\u0003') {
-    // Lurk
-    // The reason I wait for these promises is because ggml core dumps when you do it in the middle of an infer
-    await Promise.all([globalLlamaPromise, globalWhisperPromise]);
+    await Promise.all([globalWhisperPromise]);
     process.exit();
   }
 
   // R for respond
   if (key.sequence === 'r') {
-    responseReflexEventHandler(conversation);
+    responseReflexEventHandler();
   }
 });
