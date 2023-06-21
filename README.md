@@ -5,7 +5,14 @@ Let's build a conversational engine so we can talk to our computers! [Demo with 
 
 Is this project useful to you? Give me a [**⬆money upvote!⬆**](https://donate.stripe.com/fZedSC6tOdvF7ew9AD)
 
+
+## Supported platforms
+Right now, we have been testing this on linux + cuda. The project is still at an early stage; and requires a lot of elbow grease to get running. We'll keep on making it better as time goes on!
+
 ### Changelog
+Wed Jun 21 2023
+- Talk now uses an event based architecture
+- Set up still isn't straightforward. We'll give this a pass
 Wed Jun 14 2023
 - Talk now responds to you.
 - **Breaking change** - You're going to have to add piper to your path. See the manual steps
@@ -23,7 +30,7 @@ Wed Jun 14 2023
 **The intended audience for this project at the current state is people who are comfortable with hacking things together**
 
 ### Using bundled bash script (experimental)
-
+Warning: this is broken as of june 21 2023. We'll fix it when we have time!
 `chmod 775 build.sh`
 `./build.sh`
 
@@ -32,19 +39,18 @@ Wed Jun 14 2023
 
 ### Using manual steps 
 - Get [piper](https://github.com/rhasspy/piper/), and add it to your path. This means calling piper, from anywhere in you system, should work. This is a TTS engine.
+- Check config.json - you need to specifiy the path.
 - `npm install` 
 - Clone the submodules - `git submodule init && git submodule update --recursive`
 - Run `npm install` in `whisper.cpp/examples/addon.node`
-- Run `npm install` in `llama.cpp/examples/addon.node`
 - Build & run them (make sure that whisper.cpp & llama.cpp can run)
   -  `cd whisper.cpp && make`
   -  `cd llama.cpp && make`
 - In whisper.cpp git submodule `npx cmake-js compile --CDWHISPER_CUBLAS="ON" -T whisper-addon -B Release && cp -r ./build/Release  /home/kache/attractor/talk/conversation/build/whisper`
 - Note that the above command has --CDWHISPER_CUBLAS=ON. Change that depending on the build parameters you want for your whisper engine. cmake-js can take cmake flags using --CD{The flag you want}. I'm using CUBLAS=ON because I'm on a 3090. Drop it if you're on a macbook. 
 - Move the created `./whisper.cpp/build/Relase contents` to `./bindings/whisper/whisper-addon`
-- In llama.cpp git submodule `npx cmake-js compile --CDLLAMA_CUBLAS="ON" -T llama-addon -B Release && cp -r ./build/Release /home/kache/attractor/talk/conversation/build/llama`
-- Note, again, this includes LLAMA_CUBLAS flag. You only want this if you know what that flag does! E.g. if you're on a macbook, you don't want it.
-- Move the created `./llama.cpp/build/Relase contents` to `./bindings/llama/llama-addon`
+- In llama.cpp git submodule, build and run the server. [Check out their README here](https://github.com/ggerganov/llama.cpp/tree/master/examples/server). LLama should be running on local host port 8080 (We'll clean this up and make it easier to run)
+- Make sure you can run their example curl!
 - Get weights! I'm using hermes-13b for LLaMa, and whisper tiny.
 - Change `config.json` to point to the models 
 
