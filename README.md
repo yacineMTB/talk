@@ -1,36 +1,24 @@
 # Talk
 ![Talk asset art](https://github.com/yacineMTB/talk/blob/master/assets/talklogo.png?raw=true)
 
-Let's build a conversational engine so we can talk to our computers! [Demo with audio]([https://twitter.com/yacineMTB/status/1667739001158025216](https://twitter.com/yacineMTB/status/1668432864289882113)
+Let's talk to our computers! [Demo with audio](https://twitter.com/yacineMTB/status/1671511343919185924)
 
 Is this project useful to you? Give me a [**⬆money upvote!⬆**](https://donate.stripe.com/fZedSC6tOdvF7ew9AD)
 
-
 ## Supported platforms
-Right now, we have been testing this on linux + cuda. The project is still at an early stage; and requires a lot of elbow grease to get running. We'll keep on making it better as time goes on!
+**The intended audience for this project at the current state is people who are comfortable with hacking things together.** Meaning, it's hard to run on purpose.
 
-### Changelog
-Wed Jun 21 2023
-- Talk now uses an event based architecture
-- Set up still isn't straightforward. We'll give this a pass
-Wed Jun 14 2023
-- Talk now responds to you.
-- **Breaking change** - You're going to have to add piper to your path. See the manual steps
+Right now, this project is being developed on linux + cuda. Talk is still at an early stageWe'll keep on making it better as time goes on!
 
 ## Goals
 - Runs completely locally
-- Usuable by my grandmother, if she spoke english
 - Simple to extend
-- Discover little HCI hacks
-- Being able to learn something while driving
-- Clean up the [LLaMa node cpp binding](https://github.com/yacineMTB/llama.cpp/blob/cf70f603d5a50f553c022a3017ee901afc237236/examples/addon.node/addon.cpp) I added in my forked submodule enough to merge into mainline
+- I can learn something while I wash my dishes
+- Research: opening up a platform for the community to try out HCI hacks
 
 ## Installation
 
-**The intended audience for this project at the current state is people who are comfortable with hacking things together**
-
 ### Using bundled bash script (experimental)
-Warning: this is broken as of june 21 2023. We'll fix it when we have time!
 `chmod 775 build.sh`
 `./build.sh`
 

@@ -40,8 +40,7 @@ echo "Installing npm dependencies in the current directory..."
 npm install
 
 # Prompt the user for whether they want CUBLAS turned on or not
-read -p "Do you want to turn CUBLAS ON? [y/n] " CUBLAS_CHOICE
-
+read -p "Do you want to turn CUBLAS ON for whisper? [y/n] " CUBLAS_CHOICE
 if [[ $CUBLAS_CHOICE == "y" || $CUBLAS_CHOICE == "Y" ]]; then
     CUBLAS_FLAG="ON"
 else
@@ -69,65 +68,22 @@ cp -r build/Release/* ../bindings/whisper/
 # Navigate back to the root directory
 cd ../
 
-# Navigate to llama.cpp examples directory and install dependencies
-echo "Installing npm dependencies for llama.cpp examples..."
-cd llama.cpp/examples/addon.node
-npm install
+# Navigate to llama.cpp directory
+cd llama.cpp
 
-# Navigate back to root directory
-cd ../../
-
-# Compile using cmake-js with specific flags
-echo "Compiling llama.cpp examples..."
-npx cmake-js compile --CDLLAMA_CUBLAS="$CUBLAS_FLAG" -T llama-addon -B Release
-
-# Copy compiled code to the specified directory
-echo "Moving compiled llama.cpp code to bindings directory..."
-cp -r build/Release/* ../bindings/llama/
+# Compile the llama cpp server
+# Prompt the user for whether they want CUBLAS turned on or not
+read -p "Do you want to turn CUBLAS ON for llama? [y/n] " CUBLAS_CHOICE
+if [[ $CUBLAS_CHOICE == "y" || $CUBLAS_CHOICE == "Y" ]]; then
+    echo "Compiling llama.cpp server..."
+    make LLAMA_CUBLAS=1 LLAMA_BUILD_SERVER=1
+else
+    echo "Compiling llama.cpp server..."
+    make LLAMA_BUILD_SERVER=1
+fi
 
 # Navigate back to the root directory
 cd ../
-
-# Prompt the user for whether they want to download models or not
-read -p "Do you want to download models? [y/n] " DOWNLOAD_CHOICE
-
-if [[ $DOWNLOAD_CHOICE == "y" || $DOWNLOAD_CHOICE == "Y" ]]; then
-    # Create directories to store models if they don't already exist
-    echo "Creating directories for models..."
-    mkdir -p models/llama
-    mkdir -p models/whisper
-
-    # Ask the user for the URLs of the models they want to download, with default values
-    read -p "Enter the URL for the llama model (default: https://huggingface.co/TheBloke/Nous-Hermes-13B-GGML/resolve/main/nous-hermes-13b.ggmlv3.q4_K_S.bin): " LLAMA_MODEL_URL
-    LLAMA_MODEL_URL=${LLAMA_MODEL_URL:-https://huggingface.co/TheBloke/Nous-Hermes-13B-GGML/resolve/main/nous-hermes-13b.ggmlv3.q4_K_S.bin}
-
-    read -p "Enter the URL for the whisper model (default: https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en.bin): " WHISPER_MODEL_URL
-    WHISPER_MODEL_URL=${WHISPER_MODEL_URL:-https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en.bin}
-
-    # Extract the model names from the URLs
-    LLAMA_MODEL_NAME=$(basename $LLAMA_MODEL_URL)
-    WHISPER_MODEL_NAME=$(basename $WHISPER_MODEL_URL)
-
-    # Downloading model files from user-specified URLs (or default URLs) and save them to the specified directories
-    curl -L $LLAMA_MODEL_URL -o models/llama/$LLAMA_MODEL_NAME
-    curl -L $WHISPER_MODEL_URL -o models/whisper/$WHISPER_MODEL_NAME
-
-    # Backup existing config.json
-    echo "Backing up existing config.json..."
-    cp config.json config.json.bkp
-
-    # Update model paths in new config.json
-    echo "Creating new config.json..."
-    echo '{
-        "llamaModelPath": "'models/llama/$LLAMA_MODEL_NAME'",
-        "whisperModelPath": "'models/whisper/$WHISPER_MODEL_NAME'",
-        "audioListenerScript": "sample_audio.sh",
-        "lora": "",
-        "piperModelPath": "~/models/piper/en-gb-southern_english_female-low.onnx"
-    }' > config.json
-else
-    echo "Skipping model download..."
-fi
 
 # End of script
 echo "Script completed successfully!"

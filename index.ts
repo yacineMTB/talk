@@ -99,7 +99,7 @@ const getDialogue = (): string => {
   let mergedText = '';
 
   for (let e of dialogueEvents) {
-    const currentSpeaker = e.eventType === 'responseReflex' ? 'alice' : 'bob';
+    const currentSpeaker = e.eventType === 'responseReflex' ? 'me' : 'you';
     const currentText = e.eventType === 'responseReflex' ? e.data.transcription : e.data.response;
 
     if (lastType && lastType === currentSpeaker) {
@@ -222,7 +222,7 @@ const talkEventHandler = (event: ResponseReflexEvent): void => {
   };
   const input = getDialogue();
   talk(
-    "Continue the dialogue, speak for bob only. \nMake it a fun lighthearted conversation.",
+    "Continue the dialogue, speak for you only. \nMake it a fun lighthearted conversation.",
     input,
     talkCallback
   );

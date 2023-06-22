@@ -1,5 +1,6 @@
 {
   "whisperModelPath": "/home/kache/models/whisper/ggml-tiny.en.bin",
   "audioListenerScript": "record_audio.sh",
-  "piperModelPath": "~/models/piper/en-gb-southern_english_female-low.onnx"
+  "piperModelPath": "~/models/piper/en-gb-southern_english_female-low.onnx",
+  "characterDescrpition": "You're an artificial intelligence, whose goal is be a sounding board for the user"
 }
