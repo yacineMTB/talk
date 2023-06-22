@@ -43,9 +43,9 @@ npm install
 read -p "Do you want to turn CUBLAS ON? [y/n] " CUBLAS_CHOICE
 
 if [[ $CUBLAS_CHOICE == "y" || $CUBLAS_CHOICE == "Y" ]]; then
-    CUBLAS_FLAG="ON"
+    CUBLAS_FLAG_CMAKE="ON"
 else
-    CUBLAS_FLAG="OFF"
+    CUBLAS_FLAG_CMAKE="OFF"
 fi
 
 mkdir -p bindings
@@ -60,7 +60,7 @@ cd ../../
 
 # Compile using cmake-js with specific flags
 echo "Compiling whisper.cpp examples..."
-npx cmake-js compile --CDWHISPER_CUBLAS="$CUBLAS_FLAG" -T whisper-addon -B Release
+npx cmake-js compile --CDWHISPER_CUBLAS="$CUBLAS_FLAG_CMAKE" -T whisper-addon -B Release
 
 # Copy compiled code to the specified directory
 echo "Moving compiled whisper.cpp code to bindings directory..."
@@ -69,27 +69,18 @@ cp -r build/Release/* ../bindings/whisper/
 # Navigate back to the root directory
 cd ../
 
-# Navigate to llama.cpp examples directory and install dependencies
-echo "Installing npm dependencies for llama.cpp examples..."
-cd llama.cpp/examples/addon.node
-npm install
+# Navigate to llama.cpp 
+cd llama.cpp
 
-# Navigate back to root directory
-cd ../../
-
-# Compile using cmake-js with specific flags
-echo "Compiling llama.cpp examples..."
-npx cmake-js compile --CDLLAMA_CUBLAS="$CUBLAS_FLAG" -T llama-addon -B Release
-
-# Copy compiled code to the specified directory
-echo "Moving compiled llama.cpp code to bindings directory..."
-cp -r build/Release/* ../bindings/llama/
+echo "Compiling llama.cpp server"
+LLAMA_BUILD_SERVER=1 make
 
 # Navigate back to the root directory
 cd ../
 
 # Prompt the user for whether they want to download models or not
 read -p "Do you want to download models? [y/n] " DOWNLOAD_CHOICE
+
 
 if [[ $DOWNLOAD_CHOICE == "y" || $DOWNLOAD_CHOICE == "Y" ]]; then
     # Create directories to store models if they don't already exist
@@ -119,7 +110,6 @@ if [[ $DOWNLOAD_CHOICE == "y" || $DOWNLOAD_CHOICE == "Y" ]]; then
     # Update model paths in new config.json
     echo "Creating new config.json..."
     echo '{
-        "llamaModelPath": "'models/llama/$LLAMA_MODEL_NAME'",
         "whisperModelPath": "'models/whisper/$WHISPER_MODEL_NAME'",
         "audioListenerScript": "sample_audio.sh",
         "lora": "",
