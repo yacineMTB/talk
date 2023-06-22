@@ -35,7 +35,7 @@ Warning: this is broken as of june 21 2023. We'll fix it when we have time!
 `./build.sh`
 
 ** WARNING:The bash script will move the existing `config.json` file to `config.json.bkp` and create a new one instead. **
-** Warning: This script doesn't install piper **
+** Warning: This script doesn't install piper. Please use `install_piper.sh` or manual install from official piper repo**
 
 ### Dependencies
 - Node.js v14.15+
