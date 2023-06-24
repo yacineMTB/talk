@@ -49,6 +49,7 @@ else
 fi
 
 mkdir -p bindings
+mkdir -p bindings/whisper
 
 # Navigate to whisper.cpp examples directory and install dependencies
 echo "Installing npm dependencies for whisper.cpp examples..."
@@ -69,11 +70,11 @@ cp -r build/Release/* ../bindings/whisper/
 # Navigate back to the root directory
 cd ../
 
-# Navigate to llama.cpp 
+# Navigate to llama.cpp
 cd llama.cpp
 
 echo "Compiling llama.cpp server"
-LLAMA_BUILD_SERVER=1 make
+LLAMA_BUILD_SERVER=1 gmake
 
 # Navigate back to the root directory
 cd ../
