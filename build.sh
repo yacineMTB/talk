@@ -48,7 +48,6 @@ else
     CUBLAS_FLAG_CMAKE="OFF"
 fi
 
-mkdir -p bindings
 mkdir -p bindings/whisper
 
 # Navigate to whisper.cpp examples directory and install dependencies
@@ -74,7 +73,10 @@ cd ../
 cd llama.cpp
 
 echo "Compiling llama.cpp server"
-LLAMA_BUILD_SERVER=1 gmake
+mkdir build-server
+cd build-server
+cmake -DLLAMA_BUILD_SERVER=ON ..
+cmake --build . --config Release
 
 # Navigate back to the root directory
 cd ../
