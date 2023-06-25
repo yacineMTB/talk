@@ -73,13 +73,14 @@ cd ../
 cd llama.cpp
 
 echo "Compiling llama.cpp server"
+rm -rf build-server
 mkdir build-server
 cd build-server
 cmake -DLLAMA_BUILD_SERVER=ON ..
 cmake --build . --config Release
 
 # Navigate back to the root directory
-cd ../
+cd ../../
 
 # Prompt the user for whether they want to download models or not
 read -p "Do you want to download models? [y/n] " DOWNLOAD_CHOICE
