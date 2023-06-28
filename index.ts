@@ -204,6 +204,9 @@ const transcriptionEventHandler = async (event: AudioBytesEvent) => {
         lastAudioByteEventTimestamp: audioBytesEvents[audioBytesEvents.length - 1].timestamp
       }
     }
+    if (responseMutex) {
+        responseReflexEventHandler();
+    }
     newEventHandler(transcriptionEvent);
     transcriptionMutex = false;
   }
@@ -226,8 +229,14 @@ const cutTranscriptionEventHandler = async (event: TranscriptionEvent) => {
   }
 }
 
+let responseMutex = false;
 const responseReflexEventHandler = async (): Promise<void> => {
   await globalWhisperPromise;
+  if (!responseMutex) {
+    responseMutex = true;
+    return;
+  }
+  responseMutex = false;
   const responseReflexEvent: ResponseReflexEvent = {
     timestamp: Number(Date.now()),
     eventType: 'responseReflex',
