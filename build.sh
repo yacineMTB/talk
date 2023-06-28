@@ -64,6 +64,7 @@ npx cmake-js compile --CDWHISPER_CUBLAS="$CUBLAS_FLAG_CMAKE" -T whisper-addon -B
 
 # Copy compiled code to the specified directory
 echo "Moving compiled whisper.cpp code to bindings directory..."
+mkdir -p ../bindings/whisper
 cp -r build/Release/* ../bindings/whisper/
 
 # Navigate back to the root directory
