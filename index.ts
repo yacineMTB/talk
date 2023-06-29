@@ -3,6 +3,8 @@ import readline from 'readline';
 import config from './config.json';
 const { whisperModelPath, audioListenerScript } = config;
 import { talk } from './src/talk';
+const fs = require('fs');
+const path = require('path');
 
 const whisper = require('./bindings/whisper/whisper-addon');
 // INIT GGML CPP BINDINGS
@@ -17,6 +19,26 @@ const BIT_DEPTH = 16;
 const ONE_SECOND = SAMPLING_RATE * (BIT_DEPTH / 8) * CHANNELS;
 const BUFFER_LENGTH_SECONDS = 28;
 const BUFFER_LENGTH_MS = BUFFER_LENGTH_SECONDS * 1000;
+const DEFAULT_LLAMA_SERVER_URL = 'http://127.0.0.1:8080'
+
+let llamaServerUrl: string = DEFAULT_LLAMA_SERVER_URL;
+
+if ('llamaServerUrl' in config) {
+  llamaServerUrl = config.llamaServerUrl as string;
+}
+
+const DEFAULT_PROMPT = "Continue the dialogue, speak for bob only. \nMake it a fun lighthearted conversation."
+
+let conversationPrompt: string = DEFAULT_PROMPT;
+let personaConfig: string = "";
+if ('personaFile' in config) {
+  const personaFilePath = path.resolve(config.personaFile);
+  if (fs.existsSync(personaFilePath)) {
+    personaConfig = fs.readFileSync(personaFilePath, 'utf8');
+    conversationPrompt = "";
+  }
+}
+
 
 // INTERFACES
 type EventType = 'audioBytes' | 'responseReflex' | 'transcription' | 'cutTranscription' | 'talk';
@@ -222,8 +244,10 @@ const talkEventHandler = (event: ResponseReflexEvent): void => {
   };
   const input = getDialogue();
   talk(
-    "Continue the dialogue, speak for bob only. \nMake it a fun lighthearted conversation.",
+    conversationPrompt,
     input,
+    llamaServerUrl,
+    personaConfig,
     talkCallback
   );
 }
