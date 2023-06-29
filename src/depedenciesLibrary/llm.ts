@@ -5,7 +5,10 @@ const formatPrompt = (prompt: string, input: string, personaConfig: string): str
   if (personaConfig) {
       const personaConfigJSON = JSON.parse(personaConfig);
       const charName = personaConfigJSON.name || personaConfigJSON.char_name;
-      const charPersona  = personaConfigJSON.description || personaConfigJSON.char_persona;
+      var charPersona  = personaConfigJSON.description || personaConfigJSON.char_persona;
+
+      charPersona = charPersona.replace(/{{char}}/g, charName);
+      charPersona = charPersona.replace(/{{user}}/g, "You");     
 
       var promptWithPersona = prompt + charPersona;
 
