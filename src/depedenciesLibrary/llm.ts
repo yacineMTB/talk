@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { StringMappingType } from 'typescript';
 
 //TODO: Format Names should ideally be enums
 const formatPrompt = (prompt: string, input: string, personaConfig: string): string => {
@@ -8,20 +7,22 @@ const formatPrompt = (prompt: string, input: string, personaConfig: string): str
       const charName = personaConfigJSON.name || personaConfigJSON.char_name;
       const charPersona  = personaConfigJSON.description || personaConfigJSON.char_persona;
 
-      var cleanPrompt = prompt + charPersona;
+      var promptWithPersona = prompt + charPersona;
 
+      // roleplay model work better with "You" instead of USER or any other name
       var re = /alice/gi;
-      var cleanInput = input.replace(re, "You");
+      var existingDialogues = input.replace(re, "You");
 
       var re = /bob/gi;
-      var cleanInput = cleanInput.replace(re, charName);
+      existingDialogues = existingDialogues.replace(re, charName);
 
-      var exampleDialogues = personaConfigJSON.example_dialogue;
+      var exampleDialogues = personaConfigJSON.example_dialogue || personaConfigJSON.mes_example;
       exampleDialogues = exampleDialogues.replace(/{{char}}/g, charName);
       exampleDialogues = exampleDialogues.replace(/{{user}}/g, "You");      
 
-      cleanPrompt = `${cleanPrompt}\n<START>\n${personaConfigJSON.scenario}\n${exampleDialogues}`
-      return `${charName}'s Persona: ${cleanPrompt}\n<START>\n${cleanInput}\n${charName}:`
+      var scenario = personaConfigJSON.scenario || personaConfigJSON.world_scenario;
+      var promptWithScenario = `${promptWithPersona}\n<START>\n${scenario}\n${exampleDialogues}`
+      return `${charName}'s Persona: ${promptWithScenario}\n<START>\n${existingDialogues}\n${charName}:`
   } else {
     return `### Instruction:\n ${prompt} \n ### Input:\n ${input} \n ### Response:\nbob:\n`;
   }
@@ -34,6 +35,8 @@ export const llamaInvoke = (prompt: string, input: string, llamaServerUrl: strin
   if (personConfig) {
     const personaConfigJSON = JSON.parse(personConfig);
     const charName = personaConfigJSON.name || personaConfigJSON.char_name;
+
+    //TODO: There should be a better way to do this using logit_bias
     stopTokens.push(`${charName}:`);
     stopTokens.push(`Alice:`);
     stopTokens.push(`Alice  `);

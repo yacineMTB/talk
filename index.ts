@@ -3,6 +3,8 @@ import readline from 'readline';
 import config from './config.json';
 const { whisperModelPath, audioListenerScript } = config;
 import { talk } from './src/talk';
+const fs = require('fs');
+const path = require('path');
 
 const whisper = require('./bindings/whisper/whisper-addon');
 // INIT GGML CPP BINDINGS
@@ -30,12 +32,9 @@ const DEFAULT_PROMPT = "Continue the dialogue, speak for bob only. \nMake it a f
 let conversationPrompt: string = DEFAULT_PROMPT;
 let personaConfig: string = "";
 if ('personaFile' in config) {
-  const fs = require('fs');
-  const path = require('path');
   const personaFilePath = path.resolve(config.personaFile);
   if (fs.existsSync(personaFilePath)) {
     personaConfig = fs.readFileSync(personaFilePath, 'utf8');
-    // const jsonData = JSON.parse(personaConfig);
     conversationPrompt = "";
   }
 }
