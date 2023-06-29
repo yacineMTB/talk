@@ -3,7 +3,7 @@ import { StringMappingType } from 'typescript';
 
 //TODO: Format Names should ideally be enums
 const formatPrompt = (prompt: string, input: string, personaConfig: string): string => {
-  if (personaConfig !== undefined) {
+  if (personaConfig) {
       const personaConfigJSON = JSON.parse(personaConfig);
       const charName = personaConfigJSON.name || personaConfigJSON.char_name;
       const charPersona  = personaConfigJSON.description || personaConfigJSON.char_persona;
@@ -31,7 +31,7 @@ export const llamaInvoke = (prompt: string, input: string, llamaServerUrl: strin
   let formattedPrompt:string;
   formattedPrompt = formatPrompt(prompt, input, personConfig);
   let stopTokens:string[] = [];
-  if (personConfig !== undefined) {
+  if (personConfig) {
     const personaConfigJSON = JSON.parse(personConfig);
     const charName = personaConfigJSON.name || personaConfigJSON.char_name;
     stopTokens.push(`${charName}:`);
