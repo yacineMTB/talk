@@ -56,6 +56,10 @@ export const playAudioFile = async (fileName: string): Promise<void> => {
       audioPlayerState.isPlaying = false;
       resolve();
     });
+    audioPlayerState.process.on('error', (err) => {
+      audioPlayerState.isPlaying = false;
+      reject(err);
+    });
   });
 };
 

@@ -1,6 +1,12 @@
 import axios from 'axios';
 
-//TODO: Format Names should ideally be enums
+// Mostly meant to remove the narrator's text from the input. It sounds weird unless we start using multispeaker models.
+function removeBetweenStars(input: string) {
+  var regex = /\*.*?\*/g;
+  var result = input.replace(regex, '');
+  return result;
+}
+
 const formatPrompt = (prompt: string, input: string, personaConfig: string): string => {
   if (personaConfig) {
       const personaConfigJSON = JSON.parse(personaConfig);
@@ -8,24 +14,27 @@ const formatPrompt = (prompt: string, input: string, personaConfig: string): str
       var charPersona  = personaConfigJSON.description || personaConfigJSON.char_persona;
 
       charPersona = charPersona.replace(/{{char}}/g, charName);
-      charPersona = charPersona.replace(/{{user}}/g, "You");     
+      charPersona = charPersona.replace(/{{user}}/g, "You");
 
       var promptWithPersona = prompt + charPersona;
 
       // roleplay model work better with "You" instead of USER or any other name
-      var re = /alice/gi;
-      var existingDialogues = input.replace(re, "You");
-
-      var re = /bob/gi;
-      existingDialogues = existingDialogues.replace(re, charName);
+      var existingDialogues = input.replace(/alice/gi, "You");
+      existingDialogues = existingDialogues.replace(/bob/gi, charName);
+      existingDialogues = removeBetweenStars(existingDialogues);
 
       var exampleDialogues = personaConfigJSON.example_dialogue || personaConfigJSON.mes_example;
       exampleDialogues = exampleDialogues.replace(/{{char}}/g, charName);
       exampleDialogues = exampleDialogues.replace(/{{user}}/g, "You");      
+      exampleDialogues = exampleDialogues.replace(/<START>/g, "\n");
+      exampleDialogues = removeBetweenStars(exampleDialogues);
 
       var scenario = personaConfigJSON.scenario || personaConfigJSON.world_scenario;
-      var promptWithScenario = `${promptWithPersona}\n<START>\n${scenario}\n${exampleDialogues}`
-      return `${charName}'s Persona: ${promptWithScenario}\n<START>\n${existingDialogues}\n${charName}:`
+      scenario = removeBetweenStars(scenario);
+
+      var promptWithScenario = `${promptWithPersona}\n World Scenario: ${scenario}\n Example Dialogues: ${exampleDialogues}`
+      var promptInstruction = `Imitate the personality of the following character and continue the conversation based on the existing input. RESPONSES SHOULD ONLY BE IN FIRST PERSON. \n ${charName}'s Persona: ${promptWithScenario}`
+      return `### Instruction:\n ${promptInstruction} \n ### Input:\n ${existingDialogues} \n ### Response:\n${charName}:\n`;
   } else {
     return `### Instruction:\n ${prompt} \n ### Input:\n ${input} \n ### Response:\nbob:\n`;
   }
@@ -49,6 +58,7 @@ export const llamaInvoke = (prompt: string, input: string, llamaServerUrl: strin
     stopTokens.push(`Alice  `);
     stopTokens.push(`alice:`);
     stopTokens.push(`alice  `);
+    stopTokens.push(`\n`);
   }
 
   let answer = '';

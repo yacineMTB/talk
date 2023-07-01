@@ -228,16 +228,19 @@ const transcriptionEventHandler = async (event: AudioBytesEvent) => {
     const rawTranscription = await globalWhisperPromise;
     // Remove transcription artifacts like (wind howling)
     const transcription = rawTranscription.replace(/\s*\[[^\]]*\]\s*|\s*\([^)]*\)\s*/g, '');
-    const transcriptionEvent: TranscriptionEvent = {
-      timestamp: Number(Date.now()),
-      eventType: 'transcription',
-      data: {
-        buffer: joinedBuffer,
-        transcription,
-        lastAudioByteEventTimestamp: audioBytesEvents[audioBytesEvents.length - 1].timestamp
+    
+    if (transcription) {
+      const transcriptionEvent: TranscriptionEvent = {
+        timestamp: Number(Date.now()),
+        eventType: 'transcription',
+        data: {
+          buffer: joinedBuffer,
+          transcription,
+          lastAudioByteEventTimestamp: audioBytesEvents[audioBytesEvents.length - 1].timestamp
+        }
       }
+      newEventHandler(transcriptionEvent);
     }
-    newEventHandler(transcriptionEvent);
     transcriptionMutex = false;
   }
 }
@@ -261,12 +264,18 @@ const cutTranscriptionEventHandler = async (event: TranscriptionEvent) => {
 
 const responseReflexEventHandler = async (): Promise<void> => {
   await globalWhisperPromise;
+<<<<<<< HEAD
   // Check if there was a response input between the last two transcription events
   const transcriptionEvents = eventlog.events.filter(e => e.eventType === 'transcription');
   const lastTranscriptionEventTimestamp = transcriptionEvents.length > 1 ? transcriptionEvents[transcriptionEvents.length - 2].timestamp : eventlog.events[0].timestamp;
   const responseInputEvents = eventlog.events.filter(e => (e.eventType === 'responseInput'));
   const lastResponseInputTimestamp = responseInputEvents.length > 0 ? responseInputEvents[responseInputEvents.length - 1].timestamp : eventlog.events[0].timestamp;
   if (lastResponseInputTimestamp > lastTranscriptionEventTimestamp) {
+=======
+
+  var transcription = getTransciptionSoFar();
+  if (transcription) {
+>>>>>>> 732cf80 (multiple bug fixes: handle concurrent audio generation, empty transcripts, also add a more generic rp format)
     const responseReflexEvent: ResponseReflexEvent = {
       timestamp: Number(Date.now()),
       eventType: 'responseReflex',
@@ -275,6 +284,11 @@ const responseReflexEventHandler = async (): Promise<void> => {
       }
     }
     newEventHandler(responseReflexEvent);
+<<<<<<< HEAD
+=======
+  } else {
+    console.log('No transcription yet. Please speak into the microphone.')
+>>>>>>> 732cf80 (multiple bug fixes: handle concurrent audio generation, empty transcripts, also add a more generic rp format)
   }
 }
 
