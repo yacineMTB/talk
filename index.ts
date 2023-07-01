@@ -94,16 +94,22 @@ const getLastTranscriptionEvent = (): TranscriptionEvent => {
   const transcriptionEvents = eventlog.events.filter(e => e.eventType === 'transcription');
   return transcriptionEvents[transcriptionEvents.length - 1] as TranscriptionEvent;
 }
+
+const getLastResponseReflexTimestamp = (): number => {
+  const responseReflexEvents = eventlog.events.filter(e => e.eventType === 'responseReflex');
+  return responseReflexEvents.length > 0 ? responseReflexEvents[responseReflexEvents.length - 1].timestamp : eventlog.events[0].timestamp;
+};
+
 const getCutTimestamp = (): number => {
   const cutTranscriptionEvents = eventlog.events.filter(e => e.eventType === 'cutTranscription');
   const lastCut = cutTranscriptionEvents.length > 0 ? cutTranscriptionEvents[cutTranscriptionEvents.length - 1].data.lastAudioByteEventTimestamp : eventlog.events[0].timestamp;
-  const responseReflexEvents = eventlog.events.filter(e => e.eventType === 'responseReflex');
-  const lastResponseReflex = responseReflexEvents.length > 0 ? responseReflexEvents[responseReflexEvents.length - 1].timestamp : eventlog.events[0].timestamp;
+  const lastResponseReflex = getLastResponseReflexTimestamp();
   return Math.max(lastResponseReflex, lastCut);
-
 }
+
 const getTransciptionSoFar = (): string => {
-  const cutTranscriptionEvents = eventlog.events.filter(e => e.eventType === 'cutTranscription');
+  const lastResponseReflex = getLastResponseReflexTimestamp();
+  const cutTranscriptionEvents = eventlog.events.filter(e => e.eventType === 'cutTranscription' && e.timestamp > lastResponseReflex);
   const lastTranscriptionEvent = getLastTranscriptionEvent();
   const lastCutTranscriptionEvent = cutTranscriptionEvents[cutTranscriptionEvents.length - 1];
   let transcription = cutTranscriptionEvents.map(e => e.data.transcription).join(' ');
@@ -204,8 +210,7 @@ const transcriptionEventHandler = async (event: AudioBytesEvent) => {
 }
 
 const cutTranscriptionEventHandler = async (event: TranscriptionEvent) => {
-  const cutTranscriptionEvents = eventlog.events.filter(e => e.eventType === 'cutTranscription');
-  const lastCut = cutTranscriptionEvents.length > 0 ? cutTranscriptionEvents[cutTranscriptionEvents.length - 1].timestamp : eventlog.events[0].timestamp;
+  const lastCut = getCutTimestamp();
   const timeDiff = event.timestamp - lastCut;
   if (timeDiff > BUFFER_LENGTH_MS) {
     const cutTranscriptionEvent: CutTranscriptionEvent = {
