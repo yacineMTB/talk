@@ -186,7 +186,9 @@ const transcriptionEventHandler = async (event: AudioBytesEvent) => {
   if (!transcriptionMutex && joinedBuffer.length > ONE_SECOND) {
     transcriptionMutex = true;
     globalWhisperPromise = whisper.whisperInferenceOnBytes(joinedBuffer);
-    const transcription = await globalWhisperPromise;
+    const rawTranscription = await globalWhisperPromise;
+    // Remove transcription artifacts like (wind howling)
+    const transcription = rawTranscription.replace(/\s*\[[^\]]*\]\s*|\s*\([^)]*\)\s*/g, '');
     const transcriptionEvent: TranscriptionEvent = {
       timestamp: Number(Date.now()),
       eventType: 'transcription',
