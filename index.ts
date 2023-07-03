@@ -17,9 +17,10 @@ const BIT_DEPTH = 16;
 const ONE_SECOND = SAMPLING_RATE * (BIT_DEPTH / 8) * CHANNELS;
 const BUFFER_LENGTH_SECONDS = 28;
 const BUFFER_LENGTH_MS = BUFFER_LENGTH_SECONDS * 1000;
+const INTERRUPTION_LENGTH_CHARS = 20;
 
 // INTERFACES
-type EventType = 'audioBytes' | 'responseReflex' | 'transcription' | 'cutTranscription' | 'talk';
+type EventType = 'audioBytes' | 'responseReflex' | 'transcription' | 'cutTranscription' | 'talk' | 'interrupt';
 interface Event {
   eventType: EventType;
   timestamp: number;
@@ -59,6 +60,12 @@ interface TalkEvent extends Event {
     response: string;
   }
 }
+interface InterruptEvent extends Event {
+  eventType: 'interrupt';
+  data: {
+    streamId: string;
+  }
+}
 interface EventLog {
   events: Event[];
 }
@@ -72,6 +79,12 @@ const getLastTranscriptionEvent = (): TranscriptionEvent => {
   const transcriptionEvents = eventlog.events.filter(e => e.eventType === 'transcription');
   return transcriptionEvents[transcriptionEvents.length - 1] as TranscriptionEvent;
 }
+
+const getLastResponseReflexEvent = (): ResponseReflexEvent => {
+  const responseReflexEvents = eventlog.events.filter(e => e.eventType === 'responseReflex');
+  return responseReflexEvents[responseReflexEvents.length - 1] as ResponseReflexEvent;
+}
+
 const getCutTimestamp = (): number => {
   const cutTranscriptionEvents = eventlog.events.filter(e => e.eventType === 'cutTranscription');
   const lastCut = cutTranscriptionEvents.length > 0 ? cutTranscriptionEvents[cutTranscriptionEvents.length - 1].data.lastAudioByteEventTimestamp : eventlog.events[0].timestamp;
@@ -119,7 +132,7 @@ const getDialogue = (): string => {
 }
 
 // const updateScreenEvents: Set<EventType> = new Set([])
-const updateScreenEvents: Set<EventType> = new Set(['responseReflex', 'cutTranscription', 'talk'])
+const updateScreenEvents: Set<EventType> = new Set(['responseReflex', 'cutTranscription', 'talk', 'interrupt'])
 const updateScreen = (event: Event) => {
   if (updateScreenEvents.has(event.eventType)) {
     console.log(getDialogue())
@@ -210,6 +223,30 @@ const responseReflexEventHandler = async (): Promise<void> => {
 }
 
 const talkEventHandler = (event: ResponseReflexEvent): void => {
+  // Check if stream has been interrupted by the user
+  const interruptCallback = (token: string, streamId: string): boolean => {
+    const streamInterrupts = eventlog.events.filter(e => e.eventType === 'interrupt' && (e.data?.streamId == streamId));
+    if (streamInterrupts?.length) {
+      return true;
+    }
+    const lastTranscription = getLastTranscriptionEvent();
+    const lastTranscriptionLength = lastTranscription?.data?.transcription?.length;
+    const lastTranscriptionTimestamp = lastTranscription?.timestamp;
+    const lastResponseReflex = getLastResponseReflexEvent();
+    const lastResponseReflexTimestamp = lastResponseReflex?.timestamp;
+    if ((lastTranscriptionLength > 0) && (lastTranscriptionTimestamp > lastResponseReflexTimestamp) && (lastTranscriptionLength >= INTERRUPTION_LENGTH_CHARS)) {
+      const interruptEvent: InterruptEvent = {
+        timestamp: Number(Date.now()),
+        eventType: 'interrupt',
+        data: {
+          streamId
+        }
+      }
+      newEventHandler(interruptEvent);
+      return true;
+    }
+    return false;
+  }
   const talkCallback = (sentence: string) => {
     const talkEvent: TalkEvent = {
       timestamp: Number(Date.now()),
@@ -224,6 +261,7 @@ const talkEventHandler = (event: ResponseReflexEvent): void => {
   talk(
     "Continue the dialogue, speak for bob only. \nMake it a fun lighthearted conversation.",
     input,
+    interruptCallback,
     talkCallback
   );
 }
@@ -245,6 +283,7 @@ const eventDag: { [key in EventType]: { [key in EventType]?: (event: any) => voi
   },
   cutTranscription: {},
   talk: {},
+  interrupt: {}
 }
 
 const audioProcess = spawn('bash', [audioListenerScript]);

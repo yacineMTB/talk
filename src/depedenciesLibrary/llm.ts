@@ -2,7 +2,18 @@ import axios from 'axios';
 
 const API_URL = 'http://127.0.0.1:8080'
 
-export const llamaInvoke = (prompt: string, input: string, onDataFunction: (data: string) => void): Promise<string> => {
+export interface LlamaStreamCommand {
+  stop: boolean;
+}
+
+const llamaInterrupt = async (): Promise<void> => {
+  return await axios({
+    method: 'post',
+    url: `${API_URL}/interrupt`
+  });
+}
+
+export const llamaInvoke = (prompt: string, input: string, onDataFunction: (data: string) => LlamaStreamCommand): Promise<string> => {
   const formattedPrompt = `### Instruction:\n ${prompt} \n ### Input:\n ${input} \n ### Response:\nbob:\n`;
   let answer = '';
   return new Promise(async (resolve, reject) => {
@@ -20,16 +31,25 @@ export const llamaInvoke = (prompt: string, input: string, onDataFunction: (data
       },
       responseType: 'stream',
     });
-    response.data.on('data', (data: string) => {
+
+    const onData = async (data: string) => {
       const t = Buffer.from(data).toString('utf8');
       if (t.startsWith('data: ')) {
-        const message = JSON.parse(t.substring(6))
+        const message = JSON.parse(t.substring(6));
         answer += message.content;
-        onDataFunction(message.content)
+        const streamCommand = onDataFunction(message.content);
+        if (streamCommand?.stop) {
+          response.data.removeListener('data', onData);
+          await llamaInterrupt();
+        }
       }
-    });
+    }
+
+    response.data.on('data', onData);
+
     response.data.on('end', () => {
       resolve(answer);
     });
   });
 }
+
