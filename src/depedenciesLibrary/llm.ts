@@ -31,7 +31,18 @@ const formatPrompt = (prompt: string, input: string, personaConfig: string): str
   }
 }
 
-export const llamaInvoke = (prompt: string, input: string, llamaServerUrl: string, personConfig:string, onDataFunction: (data: string) => void): Promise<string> => {
+export interface LlamaStreamCommand {
+  stop: boolean;
+}
+
+const llamaInterrupt = async (llamaServerUrl: string): Promise<void> => {
+  return await axios({
+    method: 'post',
+    url: `${llamaServerUrl}/interrupt`
+  });
+}
+
+export const llamaInvoke = (prompt: string, input: string, llamaServerUrl: string, personConfig:string, onDataFunction: (data: string) => LlamaStreamCommand): Promise<string> => {
   let formattedPrompt:string;
   formattedPrompt = formatPrompt(prompt, input, personConfig);
   let stopTokens:string[] = [];
@@ -64,16 +75,25 @@ export const llamaInvoke = (prompt: string, input: string, llamaServerUrl: strin
       },
       responseType: 'stream',
     });
-    response.data.on('data', (data: string) => {
+
+    const onData = async (data: string) => {
       const t = Buffer.from(data).toString('utf8');
       if (t.startsWith('data: ')) {
-        const message = JSON.parse(t.substring(6))
+        const message = JSON.parse(t.substring(6));
         answer += message.content;
-        onDataFunction(message.content)
+        const streamCommand = onDataFunction(message.content);
+        if (streamCommand?.stop) {
+          response.data.removeListener('data', onData);
+          await llamaInterrupt(llamaServerUrl);
+        }
       }
-    });
+    }
+
+    response.data.on('data', onData);
+
     response.data.on('end', () => {
       resolve(answer);
     });
   });
 }
+
