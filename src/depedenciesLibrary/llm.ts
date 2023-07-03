@@ -35,13 +35,6 @@ export interface LlamaStreamCommand {
   stop: boolean;
 }
 
-const llamaInterrupt = async (llamaServerUrl: string): Promise<void> => {
-  return await axios({
-    method: 'post',
-    url: `${llamaServerUrl}/interrupt`
-  });
-}
-
 export const llamaInvoke = (prompt: string, input: string, llamaServerUrl: string, personConfig:string, onDataFunction: (data: string) => LlamaStreamCommand): Promise<string> => {
   let formattedPrompt:string;
   formattedPrompt = formatPrompt(prompt, input, personConfig);
@@ -60,6 +53,7 @@ export const llamaInvoke = (prompt: string, input: string, llamaServerUrl: strin
 
   let answer = '';
   return new Promise(async (resolve, reject) => {
+    const abortController = new AbortController();
     const response = await axios({
       method: 'post',
       url: `${llamaServerUrl}/completion`,
@@ -73,6 +67,7 @@ export const llamaInvoke = (prompt: string, input: string, llamaServerUrl: strin
         stream: true,
         stop: stopTokens,
       },
+      signal: abortController.signal,
       responseType: 'stream',
     });
 
@@ -84,7 +79,8 @@ export const llamaInvoke = (prompt: string, input: string, llamaServerUrl: strin
         const streamCommand = onDataFunction(message.content);
         if (streamCommand?.stop) {
           response.data.removeListener('data', onData);
-          await llamaInterrupt(llamaServerUrl);
+          abortController.abort();
+          resolve(answer);
         }
       }
     }
