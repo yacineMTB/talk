@@ -44,6 +44,8 @@ export const talk = async (prompt: string, input: string, llamaServerUrl: string
           const audioFilePath = await generateAudio(sentence);
           await playAudioFile(audioFilePath);
           sentenceCallback(sentence);
+        } catch (err) {
+          console.log('Error generating audio');
         } finally {
           release();
         }

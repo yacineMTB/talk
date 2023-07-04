@@ -280,7 +280,7 @@ const responseReflexEventHandler = async (): Promise<void> => {
       timestamp: Number(Date.now()),
       eventType: 'responseReflex',
       data: {
-        transcription: getTransciptionSoFar()
+        transcription: transcription
       }
     }
     newEventHandler(responseReflexEvent);
