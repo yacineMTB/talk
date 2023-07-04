@@ -31,6 +31,8 @@ const VAD_THOLD = 0.6;
 const VAD_ENERGY_THOLD = 0.00005;
 
 const DEFAULT_LLAMA_SERVER_URL = 'http://127.0.0.1:8080'
+const WHISPER_TIMEOUT = 5000;
+const MAX_DIALOGUES_IN_CONTEXT = 10;
 
 let llamaServerUrl: string = DEFAULT_LLAMA_SERVER_URL;
 
@@ -138,6 +140,7 @@ const getTransciptionSoFar = (): string => {
   }
   return transcription
 }
+
 const getDialogue = (): string => {
   const dialogueEvents = eventlog.events
     .filter(e => e.eventType === 'responseReflex' || e.eventType === 'talk');
@@ -162,6 +165,10 @@ const getDialogue = (): string => {
 
   // push last merged text
   if (mergedText) result.push(mergedText);
+
+  if (result.length > MAX_DIALOGUES_IN_CONTEXT) {
+    result = result.slice(-MAX_DIALOGUES_IN_CONTEXT);
+  }
 
   return result.join('\n');
 }
@@ -198,6 +205,20 @@ const newAudioBytesEvent = (buffer: Buffer): void => {
   newEventHandler(audioBytesEvent);
 }
 
+function promiseTimeout<T>(ms: number, promise: Promise<T>): Promise<T> {
+  let timeout = new Promise<T>((resolve, reject) => {
+    let id = setTimeout(() => {
+      clearTimeout(id);
+      reject(`Timed out in ${ms}ms.`);
+    }, ms);
+  });
+
+  return Promise.race([
+    promise,
+    timeout
+  ]);
+}
+
 let transcriptionMutex = false;
 const transcriptionEventHandler = async (event: AudioBytesEvent) => {
   // TODO: Unbounded linear growth. Instead, walk backwards or something.
@@ -222,32 +243,39 @@ const transcriptionEventHandler = async (event: AudioBytesEvent) => {
 
   // TODO: Wait for 1s, because whisper bindings currently throw out if not enough audio passed in
   // Therefore fix whisper
-  if (!transcriptionMutex && joinedBuffer.length > ONE_SECOND) {
-    transcriptionMutex = true;
-    globalWhisperPromise = whisper.whisperInferenceOnBytes(joinedBuffer);
-    const rawTranscription = await globalWhisperPromise;
-    // Remove transcription artifacts like (wind howling)
-    const transcription = rawTranscription.replace(/\s*\[[^\]]*\]\s*|\s*\([^)]*\)\s*/g, '');
-    
-    if (transcription) {
-      const transcriptionEvent: TranscriptionEvent = {
-        timestamp: Number(Date.now()),
-        eventType: 'transcription',
-        data: {
-          buffer: joinedBuffer,
-          transcription,
-          lastAudioByteEventTimestamp: audioBytesEvents[audioBytesEvents.length - 1].timestamp
+  if (!transcriptionMutex && joinedBuffer.length > ONE_SECOND) {  
+    try {
+      transcriptionMutex = true;
+      const whisperPromise = whisper.whisperInferenceOnBytes(joinedBuffer);
+      globalWhisperPromise = promiseTimeout<string>(WHISPER_TIMEOUT, whisperPromise);
+      
+      const rawTranscription = await globalWhisperPromise;
+      const transcription = rawTranscription.replace(/\s*\[[^\]]*\]\s*|\s*\([^)]*\)\s*/g, '');
+      
+      if (transcription) {
+        const transcriptionEvent: TranscriptionEvent = {
+          timestamp: Number(Date.now()),
+          eventType: 'transcription',
+          data: {
+            buffer: joinedBuffer,
+            transcription,
+            lastAudioByteEventTimestamp: audioBytesEvents[audioBytesEvents.length - 1].timestamp
+          }
         }
+        newEventHandler(transcriptionEvent);
       }
-      newEventHandler(transcriptionEvent);
+    } catch (error) {
+      console.error(`Whisper promise error: ${error}`);
+    } finally {
+      transcriptionMutex = false;
     }
-    transcriptionMutex = false;
   }
 }
 
 const cutTranscriptionEventHandler = async (event: TranscriptionEvent) => {
   const lastCut = getCutTimestamp();
   const timeDiff = event.timestamp - lastCut;
+  console.log(event.data.transcription)
   if (timeDiff > BUFFER_LENGTH_MS) {
     const cutTranscriptionEvent: CutTranscriptionEvent = {
       timestamp: event.timestamp,
@@ -380,6 +408,10 @@ audioProcess.stdout.on('readable', () => {
 });
 audioProcess.stderr.on('data', () => {
   // consume data events to prevent process from hanging
+});
+
+audioProcess.on('error', (err) => {
+  console.error('audioProcess stdout error');
 });
 
 readline.emitKeypressEvents(process.stdin);
