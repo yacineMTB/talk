@@ -77,3 +77,14 @@ export const llamaInvoke = (prompt: string, input: string, llamaServerUrl: strin
     });
   });
 }
+
+export const llamaEmbed = async (llamaServerUrl: string, content: string): Promise<number[]> => {
+  const response = await axios({
+    method: 'post',
+    url: `${llamaServerUrl}/embedding`,
+    data: {
+      content
+    }
+  });
+  return response.data.embedding;
+}

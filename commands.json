@@ -1,0 +1,43 @@
+[
+  {
+    "name": "restart",
+    "threshold": 0.5,
+    "phrases": [
+      {
+        "content": "Start over",
+        "embedding": [],
+        "similarity": 0
+      },
+      {
+        "content": "Restart the conversation",
+        "embedding": [],
+        "similarity": 0
+      },
+      {
+        "content": "From the top",
+        "embedding": [],
+        "similarity": 0
+      },
+      {
+        "content": "Wait, stop, go back",
+        "embedding": [],
+        "similarity": 0
+      },
+      {
+        "content": "No no no",
+        "embedding": [],
+        "similarity": 0
+      },
+      {
+        "content": "From the beginning",
+        "embedding": [],
+        "similarity": 0
+      },
+      {
+        "content": "Take it from the top",
+        "embedding": [],
+        "similarity": 0
+      }
+    ]
+  }
+]

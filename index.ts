@@ -2,7 +2,8 @@ import { spawn } from 'child_process';
 import readline from 'readline';
 import config from './config.json';
 const { whisperModelPath, audioListenerScript } = config;
-import { talk } from './src/talk';
+import embeddings from './embeddings.json';
+import { talk, checkTranscriptionForCommand, CommandType, CommandEmbedding } from './src/talk';
 const fs = require('fs');
 const path = require('path');
 
@@ -189,12 +190,15 @@ const transcriptionEventHandler = async (event: AudioBytesEvent) => {
 
   // TODO: Wait for 1s, because whisper bindings currently throw out if not enough audio passed in
   // Therefore fix whisper
+  let transcription = '';
   if (!transcriptionMutex && joinedBuffer.length > ONE_SECOND) {
     transcriptionMutex = true;
     globalWhisperPromise = whisper.whisperInferenceOnBytes(joinedBuffer);
     const rawTranscription = await globalWhisperPromise;
     // Remove transcription artifacts like (wind howling)
-    const transcription = rawTranscription.replace(/\s*\[[^\]]*\]\s*|\s*\([^)]*\)\s*/g, '');
+    transcription = rawTranscription.replace(/\s*\[[^\]]*\]\s*|\s*\([^)]*\)\s*/g, '');
+    // Trim starting whitespace
+    transcription = transcription.trimStart();
     const transcriptionEvent: TranscriptionEvent = {
       timestamp: Number(Date.now()),
       eventType: 'transcription',
@@ -206,6 +210,11 @@ const transcriptionEventHandler = async (event: AudioBytesEvent) => {
     }
     newEventHandler(transcriptionEvent);
     transcriptionMutex = false;
+  }
+  const command: CommandType = await checkTranscriptionForCommand(llamaServerUrl, embeddings as CommandEmbedding[], transcription);
+  if (command === 'restart') {
+    console.log('===== RESTART =====');
+    // TODO restart the conversation
   }
 }
 
