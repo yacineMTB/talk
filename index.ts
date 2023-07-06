@@ -88,6 +88,26 @@ const eventlog: EventLog = {
   events: []
 };
 
+class PrintBuffer {
+  // holds the current transcription and current conversation and prints them to the consoleq
+
+  transcription: string = "";
+  conversation: string = "";
+
+  constructor() {
+    setInterval(() => {
+      console.clear();
+      // console.log in green
+      console.log('\x1b[32m%s\x1b[0m', this.conversation);
+
+      console.log("\n");
+      // console.log in yellow
+      console.log('\x1b[33m%s\x1b[0m', this.transcription);
+    }, 100);
+  }
+
+}
+
 // EVENTLOG UTILITY FUNCTIONS
 // From the event log, get the transcription so far
 const getLastTranscriptionEvent = (): TranscriptionEvent => {
@@ -118,6 +138,7 @@ const getTransciptionSoFar = (): string => {
   }
   return transcription
 }
+
 const getDialogue = (): string => {
   const dialogueEvents = eventlog.events
     .filter(e => e.eventType === 'responseReflex' || e.eventType === 'talk');
@@ -147,11 +168,19 @@ const getDialogue = (): string => {
 }
 
 // const updateScreenEvents: Set<EventType> = new Set([])
-const updateScreenEvents: Set<EventType> = new Set(['responseReflex', 'cutTranscription', 'talk'])
+const updateScreenEvents: Set<EventType> = new Set(['responseReflex', 'cutTranscription', 'talk', 'transcription'])
+
+let lastDialogue = "";
 const updateScreen = (event: Event) => {
   if (updateScreenEvents.has(event.eventType)) {
-    console.log(getDialogue())
-    console.log(event);
+
+    const currentDialogue = getDialogue();
+
+    if (currentDialogue && currentDialogue !== lastDialogue) {
+      printBuffer.conversation = currentDialogue;
+    }
+
+    lastDialogue = currentDialogue;
   }
 }
 
@@ -287,6 +316,25 @@ audioProcess.stdout.on('readable', () => {
 });
 
 readline.emitKeypressEvents(process.stdin);
+
+
+let lastTranscription = "";
+let printBuffer = new PrintBuffer(); 
+
+// should be a better way to do this
+setInterval(() => {
+  try{
+    const currentTranscription = getTransciptionSoFar();
+      if (currentTranscription !== lastTranscription){
+      printBuffer.transcription = currentTranscription
+      lastTranscription = currentTranscription;
+    }
+  }
+  catch(err){
+    // no transcription yet
+    return;
+  }
+}, 100);
 process.stdin.setRawMode(true);
 process.stdin.on('keypress', async (str, key) => {
   // Detect Ctrl+C and manually emit SIGINT to preserve default behavior
