@@ -49,7 +49,7 @@ if ('personaFile' in config) {
 }
 
 // INTERFACES
-type EventType = 'audioBytes' | 'responseReflex' | 'transcription' | 'cutTranscription' | 'talk' | 'interrupt';
+type EventType = 'audioBytes' | 'responseReflex' | 'transcription' | 'cutTranscription' | 'talk' | 'interrupt' | 'responseInput';
 interface Event {
   eventType: EventType;
   timestamp: number;
@@ -89,6 +89,10 @@ interface TalkEvent extends Event {
     response: string;
   }
 }
+interface ResponseInputEvent extends Event {
+  eventType: 'responseInput',
+  data: {}
+
 interface InterruptEvent extends Event {
   eventType: 'interrupt';
   data: {
@@ -255,14 +259,21 @@ const cutTranscriptionEventHandler = async (event: TranscriptionEvent) => {
 
 const responseReflexEventHandler = async (): Promise<void> => {
   await globalWhisperPromise;
-  const responseReflexEvent: ResponseReflexEvent = {
-    timestamp: Number(Date.now()),
-    eventType: 'responseReflex',
-    data: {
-      transcription: getTransciptionSoFar()
+  // Check if there was a response input between the last two transcription events
+  const transcriptionEvents = eventlog.events.filter(e => e.eventType === 'transcription');
+  const lastTranscriptionEventTimestamp = transcriptionEvents.length > 1 ? transcriptionEvents[transcriptionEvents.length - 2].timestamp : eventlog.events[0].timestamp;
+  const responseInputEvents = eventlog.events.filter(e => (e.eventType === 'responseInput'));
+  const lastResponseInputTimestamp = responseInputEvents.length > 0 ? responseInputEvents[responseInputEvents.length - 1].timestamp : eventlog.events[0].timestamp;
+  if (lastResponseInputTimestamp > lastTranscriptionEventTimestamp) {
+    const responseReflexEvent: ResponseReflexEvent = {
+      timestamp: Number(Date.now()),
+      eventType: 'responseReflex',
+      data: {
+        transcription: getTransciptionSoFar()
+      }
     }
+    newEventHandler(responseReflexEvent);
   }
-  newEventHandler(responseReflexEvent);
 }
 
 const talkEventHandler = (event: ResponseReflexEvent): void => {
@@ -310,6 +321,15 @@ const talkEventHandler = (event: ResponseReflexEvent): void => {
   );
 }
 
+const responseInputEventHandler = (): void => {
+  const responseInputEvent: ResponseInputEvent = {
+    eventType: 'responseInput',
+    timestamp: Number(Date.now()),
+    data: {}
+  }
+  newEventHandler(responseInputEvent);
+}
+
 // Defines the DAG through which events trigger each other
 // Implicitly used by newEventHandler to spawn the correct downstream event handler
 // All event spawners call newEventHandler
@@ -324,9 +344,11 @@ const eventDag: { [key in EventType]: { [key in EventType]?: (event: any) => voi
   },
   transcription: {
     cutTranscription: cutTranscriptionEventHandler,
+    responseReflex: responseReflexEventHandler
   },
   cutTranscription: {},
   talk: {},
+  responseInput: {}
   interrupt: {}
 }
 
@@ -349,6 +371,6 @@ process.stdin.on('keypress', async (str, key) => {
 
   // R for respond
   if (key.sequence === 'r') {
-    responseReflexEventHandler();
+    responseInputEventHandler();
   }
 });
