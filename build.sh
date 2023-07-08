@@ -48,7 +48,7 @@ else
     CUBLAS_FLAG_CMAKE="OFF"
 fi
 
-mkdir -p bindings
+mkdir -p bindings/whisper
 
 # Navigate to whisper.cpp examples directory and install dependencies
 echo "Installing npm dependencies for whisper.cpp examples..."

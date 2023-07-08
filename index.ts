@@ -21,6 +21,7 @@ const ONE_SECOND = SAMPLING_RATE * (BIT_DEPTH / 8) * CHANNELS;
 const BUFFER_LENGTH_SECONDS = 28;
 const BUFFER_LENGTH_MS = BUFFER_LENGTH_SECONDS * 1000;
 const VAD_ENABLED = config.voiceActivityDetectionEnabled;
+const INTERRUPTION_LENGTH_CHARS = 20;
 // FIXME We should rewrite whisper.cpp's VAD to take a buffer size instead of ms
 // Each buffer we send is about 0.5s
 const VAD_BUFFER_SIZE = 8;
@@ -48,9 +49,8 @@ if ('personaFile' in config) {
   }
 }
 
-
 // INTERFACES
-type EventType = 'audioBytes' | 'responseReflex' | 'transcription' | 'cutTranscription' | 'talk';
+type EventType = 'audioBytes' | 'responseReflex' | 'transcription' | 'cutTranscription' | 'talk' | 'interrupt' | 'responseInput';
 interface Event {
   eventType: EventType;
   timestamp: number;
@@ -88,6 +88,16 @@ interface TalkEvent extends Event {
   eventType: 'talk';
   data: {
     response: string;
+  }
+}
+interface ResponseInputEvent extends Event {
+  eventType: 'responseInput',
+  data: {}
+
+interface InterruptEvent extends Event {
+  eventType: 'interrupt';
+  data: {
+    streamId: string;
   }
 }
 interface EventLog {
@@ -156,7 +166,7 @@ const getDialogue = (): string => {
 }
 
 // const updateScreenEvents: Set<EventType> = new Set([])
-const updateScreenEvents: Set<EventType> = new Set(['responseReflex', 'cutTranscription', 'talk'])
+const updateScreenEvents: Set<EventType> = new Set(['responseReflex', 'cutTranscription', 'talk', 'interrupt'])
 const updateScreen = (event: Event) => {
   if (updateScreenEvents.has(event.eventType)) {
     console.log(getDialogue())
@@ -250,17 +260,47 @@ const cutTranscriptionEventHandler = async (event: TranscriptionEvent) => {
 
 const responseReflexEventHandler = async (): Promise<void> => {
   await globalWhisperPromise;
-  const responseReflexEvent: ResponseReflexEvent = {
-    timestamp: Number(Date.now()),
-    eventType: 'responseReflex',
-    data: {
-      transcription: getTransciptionSoFar()
+  // Check if there was a response input between the last two transcription events
+  const transcriptionEvents = eventlog.events.filter(e => e.eventType === 'transcription');
+  const lastTranscriptionEventTimestamp = transcriptionEvents.length > 1 ? transcriptionEvents[transcriptionEvents.length - 2].timestamp : eventlog.events[0].timestamp;
+  const responseInputEvents = eventlog.events.filter(e => (e.eventType === 'responseInput'));
+  const lastResponseInputTimestamp = responseInputEvents.length > 0 ? responseInputEvents[responseInputEvents.length - 1].timestamp : eventlog.events[0].timestamp;
+  if (lastResponseInputTimestamp > lastTranscriptionEventTimestamp) {
+    const responseReflexEvent: ResponseReflexEvent = {
+      timestamp: Number(Date.now()),
+      eventType: 'responseReflex',
+      data: {
+        transcription: getTransciptionSoFar()
+      }
     }
+    newEventHandler(responseReflexEvent);
   }
-  newEventHandler(responseReflexEvent);
 }
 
 const talkEventHandler = (event: ResponseReflexEvent): void => {
+  // Check if stream has been interrupted by the user
+  const interruptCallback = (token: string, streamId: string): boolean => {
+    const streamInterrupts = eventlog.events.filter(e => e.eventType === 'interrupt' && (e.data?.streamId == streamId));
+    if (streamInterrupts?.length) {
+      return true;
+    }
+    const lastTranscription = getLastTranscriptionEvent();
+    const lastTranscriptionLength = lastTranscription?.data?.transcription?.length;
+    const lastTranscriptionTimestamp = lastTranscription?.timestamp;
+    const lastResponseReflexTimestamp = getLastResponseReflexTimestamp();
+    if ((lastTranscriptionLength > 0) && (lastTranscriptionTimestamp > lastResponseReflexTimestamp) && (lastTranscriptionLength >= INTERRUPTION_LENGTH_CHARS)) {
+      const interruptEvent: InterruptEvent = {
+        timestamp: Number(Date.now()),
+        eventType: 'interrupt',
+        data: {
+          streamId
+        }
+      }
+      newEventHandler(interruptEvent);
+      return true;
+    }
+    return false;
+  }
   const talkCallback = (sentence: string) => {
     const talkEvent: TalkEvent = {
       timestamp: Number(Date.now()),
@@ -277,8 +317,18 @@ const talkEventHandler = (event: ResponseReflexEvent): void => {
     input,
     llamaServerUrl,
     personaConfig,
+    interruptCallback,
     talkCallback
   );
+}
+
+const responseInputEventHandler = (): void => {
+  const responseInputEvent: ResponseInputEvent = {
+    eventType: 'responseInput',
+    timestamp: Number(Date.now()),
+    data: {}
+  }
+  newEventHandler(responseInputEvent);
 }
 
 // Defines the DAG through which events trigger each other
@@ -295,9 +345,12 @@ const eventDag: { [key in EventType]: { [key in EventType]?: (event: any) => voi
   },
   transcription: {
     cutTranscription: cutTranscriptionEventHandler,
+    responseReflex: responseReflexEventHandler
   },
   cutTranscription: {},
   talk: {},
+  responseInput: {}
+  interrupt: {}
 }
 
 const audioProcess = spawn('bash', [audioListenerScript]);
@@ -319,6 +372,6 @@ process.stdin.on('keypress', async (str, key) => {
 
   // R for respond
   if (key.sequence === 'r') {
-    responseReflexEventHandler();
+    responseInputEventHandler();
   }
 });
