@@ -93,7 +93,7 @@ interface TalkEvent extends Event {
 interface ResponseInputEvent extends Event {
   eventType: 'responseInput',
   data: {}
-
+}
 interface InterruptEvent extends Event {
   eventType: 'interrupt';
   data: {
