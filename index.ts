@@ -20,6 +20,14 @@ const ONE_SECOND = SAMPLING_RATE * (BIT_DEPTH / 8) * CHANNELS;
 const BUFFER_LENGTH_SECONDS = 28;
 const BUFFER_LENGTH_MS = BUFFER_LENGTH_SECONDS * 1000;
 const INTERRUPTION_LENGTH_CHARS = 20;
+const VAD_ENABLED = true;
+// FIXME We should rewrite whisper.cpp's VAD to take a buffer size instead of ms
+// Each buffer we send is about 0.5s
+const VAD_BUFFER_SIZE = 8;
+const VAD_SAMPLE_MS = ((VAD_BUFFER_SIZE / 2) / 2) * 1000;
+const VAD_THOLD = 0.6;
+const VAD_ENERGY_THOLD = 0.00005;
+
 const DEFAULT_LLAMA_SERVER_URL = 'http://127.0.0.1:8080'
 
 let llamaServerUrl: string = DEFAULT_LLAMA_SERVER_URL;
@@ -189,6 +197,19 @@ const transcriptionEventHandler = async (event: AudioBytesEvent) => {
   // TODO: Unbounded linear growth. Instead, walk backwards or something.
   const lastCut = getCutTimestamp();
   const audioBytesEvents = eventlog.events.filter(e => e.eventType === 'audioBytes' && e.timestamp >= lastCut);
+  // Check if the user has stopped speaking
+  if (VAD_ENABLED && (audioBytesEvents.length > (VAD_BUFFER_SIZE - 1))) {
+    const activityEvents = [];
+    for (let i=VAD_BUFFER_SIZE; i>0; i--) {
+      activityEvents.push(audioBytesEvents[audioBytesEvents.length - i].data.buffer);
+    }
+    const activityBuffer = Buffer.concat(activityEvents);
+    const lastTranscription = getLastTranscriptionEvent().data.transcription;
+    const doneSpeaking = whisper.finishedVoiceActivity(activityBuffer, VAD_SAMPLE_MS, VAD_THOLD, VAD_ENERGY_THOLD);
+    if (doneSpeaking && lastTranscription.length) {
+        return responseReflexEventHandler();
+    }
+  }
   const joinedBuffer = Buffer.concat(
     audioBytesEvents.map((event) => event.data.buffer)
   );
