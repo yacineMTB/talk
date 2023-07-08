@@ -349,7 +349,7 @@ const eventDag: { [key in EventType]: { [key in EventType]?: (event: any) => voi
   },
   cutTranscription: {},
   talk: {},
-  responseInput: {}
+  responseInput: {},
   interrupt: {}
 }
 
@@ -359,6 +359,9 @@ audioProcess.stdout.on('readable', () => {
   while (data = audioProcess.stdout.read()) {
     newAudioBytesEvent(data);
   }
+});
+audioProcess.stderr.on('data', () => {
+  // consume data events to prevent process from hanging
 });
 
 readline.emitKeypressEvents(process.stdin);
