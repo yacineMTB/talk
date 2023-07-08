@@ -19,6 +19,7 @@ const BIT_DEPTH = 16;
 const ONE_SECOND = SAMPLING_RATE * (BIT_DEPTH / 8) * CHANNELS;
 const BUFFER_LENGTH_SECONDS = 28;
 const BUFFER_LENGTH_MS = BUFFER_LENGTH_SECONDS * 1000;
+const INTERRUPTION_LENGTH_CHARS = 20;
 const VAD_ENABLED = true;
 // FIXME We should rewrite whisper.cpp's VAD to take a buffer size instead of ms
 // Each buffer we send is about 0.5s
@@ -47,9 +48,8 @@ if ('personaFile' in config) {
   }
 }
 
-
 // INTERFACES
-type EventType = 'audioBytes' | 'responseReflex' | 'transcription' | 'cutTranscription' | 'talk';
+type EventType = 'audioBytes' | 'responseReflex' | 'transcription' | 'cutTranscription' | 'talk' | 'interrupt';
 interface Event {
   eventType: EventType;
   timestamp: number;
@@ -87,6 +87,12 @@ interface TalkEvent extends Event {
   eventType: 'talk';
   data: {
     response: string;
+  }
+}
+interface InterruptEvent extends Event {
+  eventType: 'interrupt';
+  data: {
+    streamId: string;
   }
 }
 interface EventLog {
@@ -155,7 +161,7 @@ const getDialogue = (): string => {
 }
 
 // const updateScreenEvents: Set<EventType> = new Set([])
-const updateScreenEvents: Set<EventType> = new Set(['responseReflex', 'cutTranscription', 'talk'])
+const updateScreenEvents: Set<EventType> = new Set(['responseReflex', 'cutTranscription', 'talk', 'interrupt'])
 const updateScreen = (event: Event) => {
   if (updateScreenEvents.has(event.eventType)) {
     console.log(getDialogue())
@@ -260,6 +266,29 @@ const responseReflexEventHandler = async (): Promise<void> => {
 }
 
 const talkEventHandler = (event: ResponseReflexEvent): void => {
+  // Check if stream has been interrupted by the user
+  const interruptCallback = (token: string, streamId: string): boolean => {
+    const streamInterrupts = eventlog.events.filter(e => e.eventType === 'interrupt' && (e.data?.streamId == streamId));
+    if (streamInterrupts?.length) {
+      return true;
+    }
+    const lastTranscription = getLastTranscriptionEvent();
+    const lastTranscriptionLength = lastTranscription?.data?.transcription?.length;
+    const lastTranscriptionTimestamp = lastTranscription?.timestamp;
+    const lastResponseReflexTimestamp = getLastResponseReflexTimestamp();
+    if ((lastTranscriptionLength > 0) && (lastTranscriptionTimestamp > lastResponseReflexTimestamp) && (lastTranscriptionLength >= INTERRUPTION_LENGTH_CHARS)) {
+      const interruptEvent: InterruptEvent = {
+        timestamp: Number(Date.now()),
+        eventType: 'interrupt',
+        data: {
+          streamId
+        }
+      }
+      newEventHandler(interruptEvent);
+      return true;
+    }
+    return false;
+  }
   const talkCallback = (sentence: string) => {
     const talkEvent: TalkEvent = {
       timestamp: Number(Date.now()),
@@ -276,6 +305,7 @@ const talkEventHandler = (event: ResponseReflexEvent): void => {
     input,
     llamaServerUrl,
     personaConfig,
+    interruptCallback,
     talkCallback
   );
 }
@@ -297,6 +327,7 @@ const eventDag: { [key in EventType]: { [key in EventType]?: (event: any) => voi
   },
   cutTranscription: {},
   talk: {},
+  interrupt: {}
 }
 
 const audioProcess = spawn('bash', [audioListenerScript]);
