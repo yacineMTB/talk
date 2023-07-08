@@ -6,6 +6,7 @@
     "license": "MIT",
     "scripts": {
         "start": "npx ts-node ./index.ts",
+        "embed": "npx ts-node ./embed.ts",
         "test-voice": "npx ts-node ./tests/voice.test.ts"
     },
     "dependencies": {
