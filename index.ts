@@ -7,6 +7,7 @@ const fs = require('fs');
 const path = require('path');
 
 const whisper = require('./bindings/whisper/whisper-addon');
+
 // INIT GGML CPP BINDINGS
 whisper.init(whisperModelPath);
 
@@ -19,8 +20,8 @@ const BIT_DEPTH = 16;
 const ONE_SECOND = SAMPLING_RATE * (BIT_DEPTH / 8) * CHANNELS;
 const BUFFER_LENGTH_SECONDS = 28;
 const BUFFER_LENGTH_MS = BUFFER_LENGTH_SECONDS * 1000;
+const VAD_ENABLED = config.voiceActivityDetectionEnabled;
 const INTERRUPTION_LENGTH_CHARS = 20;
-const VAD_ENABLED = true;
 // FIXME We should rewrite whisper.cpp's VAD to take a buffer size instead of ms
 // Each buffer we send is about 0.5s
 const VAD_BUFFER_SIZE = 8;
