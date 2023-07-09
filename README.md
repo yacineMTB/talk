@@ -30,15 +30,13 @@ Wed Jun 14 2023
 *The intended audience for this project at the current state is people who are comfortable with hacking things together.*
 
 ### Using bundled bash script (experimental)
-**Warning: this is broken as of june 21 2023. We'll fix it when we have time!**
-
-`chmod 775 build.sh`
-
-`./build.sh`
+```
+chmod 775 build.sh
+./build.sh
+source install_piper.sh
+```
 
 **WARNING: The bash script will move the existing `config.json` file to `config.json.bkp` and create a new one instead.**
-
-**WARNING: This script doesn't install piper. Please use `install_piper.sh` or manual install from official piper repo**
 
 ### Dependencies
 - [Node.js](https://nodejs.org/en) v14.15+
