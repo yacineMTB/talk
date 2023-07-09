@@ -3,6 +3,8 @@ import readline from 'readline';
 import config from './config.json';
 const { whisperModelPath, audioListenerScript } = config;
 import { talk } from './src/talk';
+import { Mutex } from './src/depedenciesLibrary/mutex';
+
 const fs = require('fs');
 const path = require('path');
 
@@ -275,7 +277,6 @@ const transcriptionEventHandler = async (event: AudioBytesEvent) => {
 const cutTranscriptionEventHandler = async (event: TranscriptionEvent) => {
   const lastCut = getCutTimestamp();
   const timeDiff = event.timestamp - lastCut;
-  console.log(event.data.transcription)
   if (timeDiff > BUFFER_LENGTH_MS) {
     const cutTranscriptionEvent: CutTranscriptionEvent = {
       timestamp: event.timestamp,
@@ -300,7 +301,6 @@ const responseReflexEventHandler = async (): Promise<void> => {
  if (lastResponseInputTimestamp > lastTranscriptionEventTimestamp) {
     const transcription = getTransciptionSoFar();
     if (transcription) {
-      console.log('Triggering responseReflex')
       const responseReflexEvent: ResponseReflexEvent = {
         timestamp: Number(Date.now()),
         eventType: 'responseReflex',
@@ -315,52 +315,58 @@ const responseReflexEventHandler = async (): Promise<void> => {
   }
 }
 
+const mutex = new Mutex();
+
 const talkEventHandler = (event: ResponseReflexEvent): void => {
-  // Check if stream has been interrupted by the user
-  const interruptCallback = (token: string, streamId: string): boolean => {
-    if (!INTERRUPTION_ENABLED) {
+  mutex.lock().then(() => {
+
+    // Check if stream has been interrupted by the user
+    const interruptCallback = (token: string, streamId: string): boolean => {
+      if (!INTERRUPTION_ENABLED) {
+        return false;
+      }
+      const streamInterrupts = eventlog.events.filter(e => e.eventType === 'interrupt' && (e.data?.streamId == streamId));
+      if (streamInterrupts?.length) {
+        return true;
+      }
+      const lastTranscription = getLastTranscriptionEvent();
+      const lastTranscriptionLength = lastTranscription?.data?.transcription?.length;
+      const lastTranscriptionTimestamp = lastTranscription?.timestamp;
+      const lastResponseReflexTimestamp = getLastResponseReflexTimestamp();
+      if ((lastTranscriptionLength > 0) && (lastTranscriptionTimestamp > lastResponseReflexTimestamp) && (lastTranscriptionLength >= INTERRUPTION_LENGTH_CHARS)) {
+        const interruptEvent: InterruptEvent = {
+          timestamp: Number(Date.now()),
+          eventType: 'interrupt',
+          data: {
+            streamId
+          }
+        }
+        newEventHandler(interruptEvent);
+        return true;
+      }
       return false;
     }
-    const streamInterrupts = eventlog.events.filter(e => e.eventType === 'interrupt' && (e.data?.streamId == streamId));
-    if (streamInterrupts?.length) {
-      return true;
-    }
-    const lastTranscription = getLastTranscriptionEvent();
-    const lastTranscriptionLength = lastTranscription?.data?.transcription?.length;
-    const lastTranscriptionTimestamp = lastTranscription?.timestamp;
-    const lastResponseReflexTimestamp = getLastResponseReflexTimestamp();
-    if ((lastTranscriptionLength > 0) && (lastTranscriptionTimestamp > lastResponseReflexTimestamp) && (lastTranscriptionLength >= INTERRUPTION_LENGTH_CHARS)) {
-      const interruptEvent: InterruptEvent = {
+    const talkCallback = (sentence: string) => {
+      const talkEvent: TalkEvent = {
         timestamp: Number(Date.now()),
-        eventType: 'interrupt',
+        eventType: 'talk',
         data: {
-          streamId
+          response: sentence.trim()
         }
       }
-      newEventHandler(interruptEvent);
-      return true;
-    }
-    return false;
-  }
-  const talkCallback = (sentence: string) => {
-    const talkEvent: TalkEvent = {
-      timestamp: Number(Date.now()),
-      eventType: 'talk',
-      data: {
-        response: sentence.trim()
-      }
-    }
-    newEventHandler(talkEvent);
-  };
-  const input = getDialogue();
-  talk(
-    conversationPrompt,
-    input,
-    llamaServerUrl,
-    personaConfig,
-    interruptCallback,
-    talkCallback
-  );
+      newEventHandler(talkEvent);
+    };
+    const input = getDialogue();
+    talk(
+      conversationPrompt,
+      input,
+      llamaServerUrl,
+      personaConfig,
+      interruptCallback,
+      talkCallback
+    );
+    mutex.unlock();
+  });
 }
 
 const responseInputEventHandler = (): void => {
