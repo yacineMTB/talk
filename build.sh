@@ -73,7 +73,15 @@ cd ../
 cd llama.cpp
 
 echo "Compiling llama.cpp server"
-LLAMA_BUILD_SERVER=1 make
+if [[ $(uname -m) == "arm64" ]]; then
+    echo "Building llama.ccp for Apple silicon..."
+    cmake -DLLAMA_BUILD_SERVER=ON -DLLAMA_METAL=ON
+    cmake --build . --config Release
+else
+    echo "Building llama.ccp for non Apple silicon..."
+    cmake -DLLAMA_BUILD_SERVER=ON -DLLAMA_CUBLAS=$CUBLAS_FLAG_CMAKE
+    cmake --build . --config Release
+fi
 
 # Navigate back to the root directory
 cd ../
@@ -113,7 +121,8 @@ if [[ $DOWNLOAD_CHOICE == "y" || $DOWNLOAD_CHOICE == "Y" ]]; then
         "whisperModelPath": "'models/whisper/$WHISPER_MODEL_NAME'",
         "audioListenerScript": "sample_audio.sh",
         "lora": "",
-        "piperModelPath": "~/models/piper/en-gb-southern_english_female-low.onnx"
+        "piperModelPath": "~/models/piper/en-gb-southern_english_female-low.onnx",
+        "voiceActivityDetectionEnabled": true
     }' > config.json
 else
     echo "Skipping model download..."
