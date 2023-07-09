@@ -21,6 +21,7 @@ const ONE_SECOND = SAMPLING_RATE * (BIT_DEPTH / 8) * CHANNELS;
 const BUFFER_LENGTH_SECONDS = 28;
 const BUFFER_LENGTH_MS = BUFFER_LENGTH_SECONDS * 1000;
 const VAD_ENABLED = config.voiceActivityDetectionEnabled;
+const INTERRUPTION_ENABLED = config.interruptionEnabled;
 const INTERRUPTION_LENGTH_CHARS = 20;
 // FIXME We should rewrite whisper.cpp's VAD to take a buffer size instead of ms
 // Each buffer we send is about 0.5s
@@ -280,6 +281,9 @@ const responseReflexEventHandler = async (): Promise<void> => {
 const talkEventHandler = (event: ResponseReflexEvent): void => {
   // Check if stream has been interrupted by the user
   const interruptCallback = (token: string, streamId: string): boolean => {
+    if (!INTERRUPTION_ENABLED) {
+      return false;
+    }
     const streamInterrupts = eventlog.events.filter(e => e.eventType === 'interrupt' && (e.data?.streamId == streamId));
     if (streamInterrupts?.length) {
       return true;
