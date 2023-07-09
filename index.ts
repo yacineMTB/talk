@@ -317,8 +317,9 @@ const responseReflexEventHandler = async (): Promise<void> => {
 
 const mutex = new Mutex();
 
-const talkEventHandler = (event: ResponseReflexEvent): void => {
-  mutex.lock().then(() => {
+const talkEventHandler = async (event: ResponseReflexEvent): Promise<void> => {
+  await mutex.lock();
+  try {
 
     // Check if stream has been interrupted by the user
     const interruptCallback = (token: string, streamId: string): boolean => {
@@ -357,7 +358,7 @@ const talkEventHandler = (event: ResponseReflexEvent): void => {
       newEventHandler(talkEvent);
     };
     const input = getDialogue();
-    talk(
+    const talkPromise = talk(
       conversationPrompt,
       input,
       llamaServerUrl,
@@ -365,8 +366,11 @@ const talkEventHandler = (event: ResponseReflexEvent): void => {
       interruptCallback,
       talkCallback
     );
+
+    await talkPromise;
+  } finally {
     mutex.unlock();
-  });
+  }
 }
 
 const responseInputEventHandler = (): void => {
