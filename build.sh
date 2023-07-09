@@ -115,11 +115,21 @@ if [[ $DOWNLOAD_CHOICE == "y" || $DOWNLOAD_CHOICE == "Y" ]]; then
     echo "Backing up existing config.json..."
     cp config.json config.json.bkp
 
+    read -p "Set the audio listner: [s]ample_audio/[r]ecord_audio " AUDIO_LISTENER 
+    case $AUDIO_LISTENER in
+        r|record_audio) 
+            AUDIO_LISTENER_SCRIPT="record_audio.sh"
+            ;;
+        *)
+            AUDIO_LISTENER_SCRIPT="sample_audio.sh"
+            ;;
+    esac
+
     # Update model paths in new config.json
     echo "Creating new config.json..."
     echo '{
         "whisperModelPath": "'models/whisper/$WHISPER_MODEL_NAME'",
-        "audioListenerScript": "sample_audio.sh",
+        "audioListenerScript": "'$AUDIO_LISTENER_SCRIPT'",
         "lora": "",
         "piperModelPath": "~/models/piper/en-gb-southern_english_female-low.onnx",
         "voiceActivityDetectionEnabled": true
