@@ -212,7 +212,7 @@ const transcriptionEventHandler = async (event: AudioBytesEvent) => {
     const lastTranscription = getLastTranscriptionEvent().data.transcription;
     const doneSpeaking = whisper.finishedVoiceActivity(activityBuffer, VAD_SAMPLE_MS, VAD_THOLD, VAD_ENERGY_THOLD);
     if (doneSpeaking && lastTranscription.length) {
-        return responseReflexEventHandler();
+        return responseInputEventHandler();
     }
   }
   const joinedBuffer = Buffer.concat(
