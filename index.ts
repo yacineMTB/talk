@@ -29,7 +29,7 @@ const INTERRUPTION_LENGTH_CHARS = 20;
 // Each buffer we send is about 0.5s
 const VAD_BUFFER_SIZE = 8;
 const VAD_SAMPLE_MS = ((VAD_BUFFER_SIZE / 2) / 2) * 1000;
-const VAD_THOLD = 0.8;
+const VAD_THOLD = 0.6;
 const VAD_ENERGY_THOLD = 0.00005;
 
 const DEFAULT_LLAMA_SERVER_URL = 'http://127.0.0.1:8080'
@@ -233,9 +233,9 @@ const transcriptionEventHandler = async (event: AudioBytesEvent) => {
       activityEvents.push(audioBytesEvents[audioBytesEvents.length - i].data.buffer);
     }
     const activityBuffer = Buffer.concat(activityEvents);
-    const lastTranscription = getLastTranscriptionEvent().data.transcription;
+    const lastTranscription = getLastTranscriptionEvent()
     const doneSpeaking = whisper.finishedVoiceActivity(activityBuffer, VAD_SAMPLE_MS, VAD_THOLD, VAD_ENERGY_THOLD);
-    if (doneSpeaking && lastTranscription.length) {
+    if (doneSpeaking && lastTranscription && lastTranscription.data.transcription.length) {
         return responseInputEventHandler();
     }
   }
@@ -250,22 +250,23 @@ const transcriptionEventHandler = async (event: AudioBytesEvent) => {
       transcriptionMutex = true;
       const whisperPromise = whisper.whisperInferenceOnBytes(joinedBuffer);
       globalWhisperPromise = promiseTimeout<string>(WHISPER_TIMEOUT, whisperPromise);
-      
+      // globalWhisperPromise = whisper.whisperInferenceOnBytes(joinedBuffer);
       const rawTranscription = await globalWhisperPromise;
-      const transcription = rawTranscription.replace(/\s*\[[^\]]*\]\s*|\s*\([^)]*\)\s*/g, '');
+      let transcription = rawTranscription.replace(/\s*\[[^\]]*\]\s*|\s*\([^)]*\)\s*/g, ''); // clear up text in brackets
+      transcription = transcription.replace(/[^a-zA-Z0-9\.,\?!\s\:\'\-]/g, ""); // retain only alphabets chars and punctuation
+      transcription = transcription.trim();
       
-      if (transcription) {
-        const transcriptionEvent: TranscriptionEvent = {
-          timestamp: Number(Date.now()),
-          eventType: 'transcription',
-          data: {
-            buffer: joinedBuffer,
-            transcription,
-            lastAudioByteEventTimestamp: audioBytesEvents[audioBytesEvents.length - 1].timestamp
-          }
+      const transcriptionEvent: TranscriptionEvent = {
+        timestamp: Number(Date.now()),
+        eventType: 'transcription',
+        data: {
+          buffer: joinedBuffer,
+          transcription,
+          lastAudioByteEventTimestamp: audioBytesEvents[audioBytesEvents.length - 1].timestamp
         }
-        newEventHandler(transcriptionEvent);
       }
+      newEventHandler(transcriptionEvent);
+      
     } catch (error) {
       console.error(`Whisper promise error: ${error}`);
     } finally {
