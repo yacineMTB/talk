@@ -27,7 +27,7 @@ const INTERRUPTION_LENGTH_CHARS = 20;
 // Each buffer we send is about 0.5s
 const VAD_BUFFER_SIZE = 8;
 const VAD_SAMPLE_MS = ((VAD_BUFFER_SIZE / 2) / 2) * 1000;
-const VAD_THOLD = 0.6;
+const VAD_THOLD = 0.8;
 const VAD_ENERGY_THOLD = 0.00005;
 
 const DEFAULT_LLAMA_SERVER_URL = 'http://127.0.0.1:8080'
@@ -292,31 +292,26 @@ const cutTranscriptionEventHandler = async (event: TranscriptionEvent) => {
 
 const responseReflexEventHandler = async (): Promise<void> => {
   await globalWhisperPromise;
-<<<<<<< HEAD
-  // Check if there was a response input between the last two transcription events
-  const transcriptionEvents = eventlog.events.filter(e => e.eventType === 'transcription');
-  const lastTranscriptionEventTimestamp = transcriptionEvents.length > 1 ? transcriptionEvents[transcriptionEvents.length - 2].timestamp : eventlog.events[0].timestamp;
-  const responseInputEvents = eventlog.events.filter(e => (e.eventType === 'responseInput'));
-  const lastResponseInputTimestamp = responseInputEvents.length > 0 ? responseInputEvents[responseInputEvents.length - 1].timestamp : eventlog.events[0].timestamp;
-  if (lastResponseInputTimestamp > lastTranscriptionEventTimestamp) {
-=======
-
-  var transcription = getTransciptionSoFar();
-  if (transcription) {
->>>>>>> 732cf80 (multiple bug fixes: handle concurrent audio generation, empty transcripts, also add a more generic rp format)
-    const responseReflexEvent: ResponseReflexEvent = {
-      timestamp: Number(Date.now()),
-      eventType: 'responseReflex',
-      data: {
-        transcription: transcription
+ // Check if there was a response input between the last two transcription events
+ const transcriptionEvents = eventlog.events.filter(e => e.eventType === 'transcription');
+ const lastTranscriptionEventTimestamp = transcriptionEvents.length > 1 ? transcriptionEvents[transcriptionEvents.length - 2].timestamp : eventlog.events[0].timestamp;
+ const responseInputEvents = eventlog.events.filter(e => (e.eventType === 'responseInput'));
+ const lastResponseInputTimestamp = responseInputEvents.length > 0 ? responseInputEvents[responseInputEvents.length - 1].timestamp : eventlog.events[0].timestamp;
+ if (lastResponseInputTimestamp > lastTranscriptionEventTimestamp) {
+    const transcription = getTransciptionSoFar();
+    if (transcription) {
+      console.log('Triggering responseReflex')
+      const responseReflexEvent: ResponseReflexEvent = {
+        timestamp: Number(Date.now()),
+        eventType: 'responseReflex',
+        data: {
+          transcription: transcription
+        }
       }
+      newEventHandler(responseReflexEvent);
+    } else {
+      console.log('No transcription yet. Please speak into the microphone.')
     }
-    newEventHandler(responseReflexEvent);
-<<<<<<< HEAD
-=======
-  } else {
-    console.log('No transcription yet. Please speak into the microphone.')
->>>>>>> 732cf80 (multiple bug fixes: handle concurrent audio generation, empty transcripts, also add a more generic rp format)
   }
 }
 
@@ -408,10 +403,6 @@ audioProcess.stdout.on('readable', () => {
 });
 audioProcess.stderr.on('data', () => {
   // consume data events to prevent process from hanging
-});
-
-audioProcess.on('error', (err) => {
-  console.error('audioProcess stdout error');
 });
 
 readline.emitKeypressEvents(process.stdin);

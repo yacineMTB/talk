@@ -9,7 +9,6 @@
         "test-voice": "npx ts-node ./tests/voice.test.ts"
     },
     "dependencies": {
-        "async-mutex": "^0.4.0",
         "axios": "^1.4.0",
         "ts-node": "^10.9.1",
         "uuid": "^9.0.0"
