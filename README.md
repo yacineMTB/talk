@@ -62,6 +62,7 @@ source install_piper.sh
 - Change the `config.json` to point to `record_audio.sh` to listen from mic or `sample_audio.sh` for bundled audio examples
 - If `record_audio.sh` is selected, make sure `sox` package is install in your system. You can install it `apt install sox libsox-fmt-all`
 - Read the code! Figure out which button you'll have to press to initiate the response reflex and have the bot respond
+- (In another shell) `./llama.cpp/build-server/bin/server -m models/llama/nous-hermes-13b.ggmlv3.q4_K_S.bin -c 2048`
 - `npm run start` 
 
 ## Contributing
