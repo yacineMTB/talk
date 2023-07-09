@@ -9,5 +9,8 @@ talk(
   "'agent' represents you. Don't use lists, only use english sentences. Only use UTF-8 characters." +
   "Keep the conversation going! Your name is alice. Only speak for alice, preceded with 'agent: '. What does alice say next?",
   inputData,
+  "http://localhost:8080",
+  "",
+  (token: string, streamId:string) => {return false;},
   (sent: string) => { console.log(sent) }
 );
