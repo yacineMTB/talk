@@ -324,9 +324,6 @@ const talkEventHandler = async (event: ResponseReflexEvent): Promise<void> => {
 
     // Check if stream has been interrupted by the user
     const interruptCallback = (token: string, streamId: string): boolean => {
-      if (!INTERRUPTION_ENABLED) {
-        return false;
-      }
       const streamInterrupts = eventlog.events.filter(e => e.eventType === 'interrupt' && (e.data?.streamId == streamId));
       if (streamInterrupts?.length) {
         return true;
@@ -364,7 +361,7 @@ const talkEventHandler = async (event: ResponseReflexEvent): Promise<void> => {
       input,
       llamaServerUrl,
       personaConfig,
-      interruptCallback,
+      INTERRUPTION_ENABLED ? interruptCallback : null,
       talkCallback
     );
 

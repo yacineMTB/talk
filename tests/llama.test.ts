@@ -6,7 +6,7 @@ const streamCommand: LlamaStreamCommand = {
 }
 
 const main = async () => {
-  const result = await llamaInvoke("Tell me about this particular anime", "Cowboy Bepop", " http://localhost:8080", "", (data) => {stdout.write(data); return streamCommand});
-  console.log(result);
+  const result = await llamaInvoke("Tell me about this particular anime", "Cowboy Bepop", " http://localhost:8080", "", (data) => {stdout.write(data)});
+  console.log("\n");
 }
 main();
