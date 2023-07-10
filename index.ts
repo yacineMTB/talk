@@ -250,7 +250,7 @@ const transcriptionEventHandler = async (event: AudioBytesEvent) => {
       transcriptionMutex = true;
       const whisperPromise = whisper.whisperInferenceOnBytes(joinedBuffer);
       globalWhisperPromise = promiseTimeout<string>(WHISPER_TIMEOUT, whisperPromise);
-      // globalWhisperPromise = whisper.whisperInferenceOnBytes(joinedBuffer);
+
       const rawTranscription = await globalWhisperPromise;
       let transcription = rawTranscription.replace(/\s*\[[^\]]*\]\s*|\s*\([^)]*\)\s*/g, ''); // clear up text in brackets
       transcription = transcription.replace(/[^a-zA-Z0-9\.,\?!\s\:\'\-]/g, ""); // retain only alphabets chars and punctuation

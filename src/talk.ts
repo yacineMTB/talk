@@ -37,5 +37,5 @@ export const talk = async (prompt: string, input: string, llamaServerUrl: string
   });
   await promisesChain;
   return response;
-  
+
 }

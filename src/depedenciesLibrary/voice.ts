@@ -54,10 +54,16 @@ export const playAudioFile = async (fileName: string): Promise<void> => {
     audioPlayerState.process = spawn('ffplay', ['-nodisp', '-autoexit', audioPath]);
     audioPlayerState.process.on('close', (code) => {
       audioPlayerState.isPlaying = false;
+      fs.unlink(audioPath, (err) => {
+        // ignore error
+      });
       resolve();
     });
     audioPlayerState.process.on('error', (err) => {
       audioPlayerState.isPlaying = false;
+      fs.unlink(audioPath, (err) => {
+        // ignore error
+      });
       reject(err);
     });
   });
