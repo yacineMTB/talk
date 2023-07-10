@@ -24,7 +24,7 @@ export const generateAudio = (text: string): Promise<string> => {
 
     exec(`echo "${text}" | piper --model ${modelPath} --output_file ${outputFilePath}`, (error) => {
       if (error) {
-        console.error(`exec error: ${error}`);
+        // console.error(`exec error: ${error}`);
         reject(error);
       } else {
         resolve(fileName);
@@ -54,7 +54,17 @@ export const playAudioFile = async (fileName: string): Promise<void> => {
     audioPlayerState.process = spawn('ffplay', ['-nodisp', '-autoexit', audioPath]);
     audioPlayerState.process.on('close', (code) => {
       audioPlayerState.isPlaying = false;
+      fs.unlink(audioPath, (err) => {
+        // ignore error
+      });
       resolve();
+    });
+    audioPlayerState.process.on('error', (err) => {
+      audioPlayerState.isPlaying = false;
+      fs.unlink(audioPath, (err) => {
+        // ignore error
+      });
+      reject(err);
     });
   });
 };
