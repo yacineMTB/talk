@@ -33,9 +33,11 @@ Wed Jun 14 2023
 ```
 chmod 775 build.sh
 ./build.sh
-source install_piper.sh
 ```
-
+If you would like to install piper automatically: (this downloads the piper binaries and the default TTS model)
+```
+source install_piper.sh true 1
+```
 **WARNING: The bash script will move the existing `config.json` file to `config.json.bkp` and create a new one instead.**
 
 ### Dependencies
