@@ -11,6 +11,6 @@ talk(
   inputData,
   "http://localhost:8080",
   "",
-  (token: string, streamId:string) => {return false;},
+  null,
   (sent: string) => { console.log(sent) }
 );
