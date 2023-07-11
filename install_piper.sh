@@ -68,7 +68,7 @@ function main() {
 
 
         # Set voice download link based on user preference
-        VOICE_LINK="${VOICE_URLS[$model]}"
+        VOICE_LINK="${VOICE_URLS[$MODEL_]}"
 
         # Download and extract voice
         mkdir -p models/piper
