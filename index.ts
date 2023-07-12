@@ -35,6 +35,7 @@ const VAD_ENERGY_THOLD = 0.00005;
 const DEFAULT_LLAMA_SERVER_URL = 'http://127.0.0.1:8080'
 const WHISPER_TIMEOUT = 5000;
 const MAX_DIALOGUES_IN_CONTEXT = 10;
+const GRAPH_FILE = 'talk.dot';
 
 let llamaServerUrl: string = DEFAULT_LLAMA_SERVER_URL;
 
@@ -176,18 +177,43 @@ const getDialogue = (): string => {
 }
 
 // const updateScreenEvents: Set<EventType> = new Set([])
-const updateScreenEvents: Set<EventType> = new Set(['responseReflex', 'cutTranscription', 'talk', 'interrupt'])
+const updateScreenEvents: Set<EventType> = new Set(['responseReflex', 'cutTranscription', 'talk', 'interrupt']);
 const updateScreen = (event: Event) => {
   if (updateScreenEvents.has(event.eventType)) {
-    console.log(getDialogue())
+    console.log(getDialogue());
     console.log(event);
   }
 }
 
+// Graphviz
+const graph = ["digraph G {"];
+
+const updateGraphEvents: Set<EventType> = new Set(['responseInput', 'responseReflex', 'audioBytes', 'transcription', 'cutTranscription', 'talk', 'interrupt']);
+const updateGraph = (event: Event, prevEvent: void | Event) => {
+  let label = event.eventType;
+  if (event.data?.transcription) {
+    label += `: ${event.data.transcription}`;
+  } else if (event.data?.response) {
+    label += `: ${event.data.response}`;
+  }
+  graph.push(`    ${event.eventType}${event.timestamp} [label="${label}"]`)
+  if (prevEvent?.eventType && updateGraphEvents.has(event.eventType) && updateGraphEvents.has(prevEvent.eventType)) {
+    graph.push(`    ${prevEvent.eventType}${prevEvent.timestamp} -> ${event.eventType}${event.timestamp}`);
+  }
+}
+const writeGraph = () => {
+  graph.push('}');
+  fs.writeFileSync(GRAPH_FILE, '');
+  for (let line in graph) {
+    fs.appendFileSync(GRAPH_FILE, `${graph[line]}\n`, 'utf8');
+  }
+}
+
 // EVENTS
-const newEventHandler = (event: Event): void => {
+const newEventHandler = (event: Event, prevEvent: void | Event): void => {
   eventlog.events.push(event);
-  updateScreen(event)
+  updateScreen(event);
+  updateGraph(event, prevEvent);
   const downstreamEvents = eventDag[event.eventType];
   for (const downstreamEvent in downstreamEvents) {
     const downstreamEventFn = downstreamEvents[downstreamEvent as EventType];
@@ -265,7 +291,7 @@ const transcriptionEventHandler = async (event: AudioBytesEvent) => {
           lastAudioByteEventTimestamp: audioBytesEvents[audioBytesEvents.length - 1].timestamp
         }
       }
-      newEventHandler(transcriptionEvent);
+      newEventHandler(transcriptionEvent, event);
       
     } catch (error) {
       console.error(`Whisper promise error: ${error}`);
@@ -288,11 +314,11 @@ const cutTranscriptionEventHandler = async (event: TranscriptionEvent) => {
         lastAudioByteEventTimestamp: event.data.lastAudioByteEventTimestamp
       }
     }
-    newEventHandler(cutTranscriptionEvent);
+    newEventHandler(cutTranscriptionEvent, event);
   }
 }
 
-const responseReflexEventHandler = async (): Promise<void> => {
+const responseReflexEventHandler = async (event: TranscriptionEvent): Promise<void> => {
   await globalWhisperPromise;
  // Check if there was a response input between the last two transcription events
  const transcriptionEvents = eventlog.events.filter(e => e.eventType === 'transcription');
@@ -309,7 +335,7 @@ const responseReflexEventHandler = async (): Promise<void> => {
           transcription: transcription
         }
       }
-      newEventHandler(responseReflexEvent);
+      newEventHandler(responseReflexEvent, event);
     } else {
       console.log('No transcription yet. Please speak into the microphone.')
     }
@@ -343,7 +369,7 @@ const talkEventHandler = async (event: ResponseReflexEvent): Promise<void> => {
             streamId
           }
         }
-        newEventHandler(interruptEvent);
+        newEventHandler(interruptEvent, event);
         return true;
       }
       return false;
@@ -356,7 +382,7 @@ const talkEventHandler = async (event: ResponseReflexEvent): Promise<void> => {
           response: sentence.trim()
         }
       }
-      newEventHandler(talkEvent);
+      newEventHandler(talkEvent, event);
     };
     const input = getDialogue();
     const talkPromise = talk(
@@ -422,6 +448,7 @@ process.stdin.on('keypress', async (str, key) => {
   // Detect Ctrl+C and manually emit SIGINT to preserve default behavior
   if (key.sequence === '\u0003') {
     await Promise.all([globalWhisperPromise]);
+    writeGraph();
     process.exit();
   }
 

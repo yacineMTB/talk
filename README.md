@@ -43,6 +43,7 @@ source install_piper.sh true $([ -n "$BASH" ] && echo 1 || echo 2)
 ### Dependencies
 - [Node.js](https://nodejs.org/en) v14.15+
 - [piper](https://github.com/rhasspy/piper/), a TTS engine. Make sure to add it to your path. This means calling `piper` from anywhere in your system should work.
+- [graphviz](https://graphviz.org/) (optional) for displaying the event graph. This is useful for development.
 
 ### Using manual steps 
 - `npm install` 
@@ -66,6 +67,12 @@ source install_piper.sh true $([ -n "$BASH" ] && echo 1 || echo 2)
 - Read the code! Figure out which button you'll have to press to initiate the response reflex and have the bot respond
 - (In another shell) `./llama.cpp/build_server/bin/server -m models/llama/nous-hermes-13b.ggmlv3.q4_K_S.bin -c 2048`
 - `npm run start` 
+
+## Display graphs
+
+A graphviz file `talk.dot` will be created when you press ctrl-C.
+
+You can view the graph by running `npm run graph`, which will plot an svg and open it.
 
 ## Contributing
 Please do
