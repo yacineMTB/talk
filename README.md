@@ -54,7 +54,7 @@ source install_piper.sh true $([ -n "$BASH" ] && echo 1 || echo 2)
 - In the whisper.cpp git submodule, run:
   - `npx cmake-js compile --CDWHISPER_CUBLAS="ON" -T whisper-addon -B Release`
 - Note that the above command has --CDWHISPER_CUBLAS=ON. Change that depending on the build parameters you want for your whisper engine. cmake-js can take cmake flags using --CD{The flag you want}. I'm using CUBLAS=ON because I'm on a 3090. **Drop it if you're on a macbook**. 
-- `mv build/Release/whisper-addon.node ../bindings/whisper/`
+- `mv build/Release/* ../bindings/whisper/`
 - Get weights for the next step! I'm using hermes-13b for LLaMa, and whisper tiny.
 - In llama.cpp git submodule, build and run the server. [Check out their README here](https://github.com/ggerganov/llama.cpp/tree/master/examples/server) for steps on how to do that. LLama should be running on local host port 8080 (We'll clean this up and make it easier to run)
 - Make sure you can run their example curl!

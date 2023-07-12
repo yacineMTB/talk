@@ -294,12 +294,12 @@ const cutTranscriptionEventHandler = async (event: TranscriptionEvent) => {
 
 const responseReflexEventHandler = async (): Promise<void> => {
   await globalWhisperPromise;
- // Check if there was a response input between the last two transcription events
- const transcriptionEvents = eventlog.events.filter(e => e.eventType === 'transcription');
- const lastTranscriptionEventTimestamp = transcriptionEvents.length > 1 ? transcriptionEvents[transcriptionEvents.length - 2].timestamp : eventlog.events[0].timestamp;
- const responseInputEvents = eventlog.events.filter(e => (e.eventType === 'responseInput'));
- const lastResponseInputTimestamp = responseInputEvents.length > 0 ? responseInputEvents[responseInputEvents.length - 1].timestamp : eventlog.events[0].timestamp;
- if (lastResponseInputTimestamp > lastTranscriptionEventTimestamp) {
+  // Check if there was a response input between the last two transcription events
+  const transcriptionEvents = eventlog.events.filter(e => e.eventType === 'transcription');
+  const lastTranscriptionEventTimestamp = transcriptionEvents.length > 1 ? transcriptionEvents[transcriptionEvents.length - 2].timestamp : eventlog.events[0].timestamp;
+  const responseInputEvents = eventlog.events.filter(e => (e.eventType === 'responseInput'));
+  const lastResponseInputTimestamp = responseInputEvents.length > 0 ? responseInputEvents[responseInputEvents.length - 1].timestamp : eventlog.events[0].timestamp;
+  if (lastResponseInputTimestamp > lastTranscriptionEventTimestamp) {
     const transcription = getTransciptionSoFar();
     if (transcription) {
       const responseReflexEvent: ResponseReflexEvent = {
