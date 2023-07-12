@@ -6,7 +6,8 @@
     "license": "MIT",
     "scripts": {
         "start": "npx ts-node ./index.ts",
-        "test-voice": "npx ts-node ./tests/voice.test.ts"
+        "test-voice": "npx ts-node ./tests/voice.test.ts",
+        "graph": "cat talk.dot | dot -Tsvg > talk.svg && open talk.svg"
     },
     "dependencies": {
         "axios": "^1.4.0",
