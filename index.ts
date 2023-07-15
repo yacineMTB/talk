@@ -132,7 +132,7 @@ const getCutTimestamp = (): number => {
   return Math.max(lastResponseReflex, lastCut);
 }
 
-const getTransciptionSoFar = (): string => {
+const getTranscriptionSoFar = (): string => {
   const lastResponseReflex = getLastResponseReflexTimestamp();
   const cutTranscriptionEvents = eventlog.events.filter(e => e.eventType === 'cutTranscription' && e.timestamp > lastResponseReflex);
   const lastTranscriptionEvent = getLastTranscriptionEvent();
@@ -262,7 +262,7 @@ const transcriptionEventHandler = async (event: AudioBytesEvent) => {
     const lastTranscription = getLastTranscriptionEvent()
     const doneSpeaking = whisper.finishedVoiceActivity(activityBuffer, VAD_SAMPLE_MS, VAD_THOLD, VAD_ENERGY_THOLD);
     if (doneSpeaking && lastTranscription && lastTranscription.data.transcription.length) {
-        return responseInputEventHandler();
+        return responseInputEventHandler(event);
     }
   }
   const joinedBuffer = Buffer.concat(
@@ -326,7 +326,7 @@ const responseReflexEventHandler = async (event: TranscriptionEvent): Promise<vo
  const responseInputEvents = eventlog.events.filter(e => (e.eventType === 'responseInput'));
  const lastResponseInputTimestamp = responseInputEvents.length > 0 ? responseInputEvents[responseInputEvents.length - 1].timestamp : eventlog.events[0].timestamp;
  if (lastResponseInputTimestamp > lastTranscriptionEventTimestamp) {
-    const transcription = getTransciptionSoFar();
+    const transcription = getTranscriptionSoFar();
     if (transcription) {
       const responseReflexEvent: ResponseReflexEvent = {
         timestamp: Number(Date.now()),
@@ -400,13 +400,13 @@ const talkEventHandler = async (event: ResponseReflexEvent): Promise<void> => {
   }
 }
 
-const responseInputEventHandler = (): void => {
+const responseInputEventHandler = (event: void | AudioBytesEvent): void => {
   const responseInputEvent: ResponseInputEvent = {
     eventType: 'responseInput',
     timestamp: Number(Date.now()),
     data: {}
   }
-  newEventHandler(responseInputEvent);
+  newEventHandler(responseInputEvent, event);
 }
 
 // Defines the DAG through which events trigger each other

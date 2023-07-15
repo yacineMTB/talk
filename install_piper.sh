@@ -22,11 +22,11 @@ function main() {
 
     # Set download link based on architecture
     if [ "$ARCH" = "x86_64" ]; then
-        DOWNLOAD_LINK="https://github.com/rhasspy/piper/releases/download/v1.0.0/piper_amd64.tar.gz"
+        DOWNLOAD_LINK="https://github.com/rhasspy/piper/releases/download/v1.1.0/piper_amd64.tar.gz"
     elif [ "$ARCH" = "aarch64" ]; then
-        DOWNLOAD_LINK="https://github.com/rhasspy/piper/releases/download/v1.0.0/piper_arm64.tar.gz"
+        DOWNLOAD_LINK="https://github.com/rhasspy/piper/releases/download/v1.1.0/piper_arm64.tar.gz"
     elif [ "$ARCH" = "armv7l" ]; then
-        DOWNLOAD_LINK="https://github.com/rhasspy/piper/releases/download/v1.0.0/piper_armv7.tar.gz"
+        DOWNLOAD_LINK="https://github.com/rhasspy/piper/releases/download/v1.1.0/piper_armv7.tar.gz"
     else
         echo "Unsupported architecture: $ARCH. You will have to manually compile and install piper from their repo https://github.com/rhasspy/piper/"
         return
