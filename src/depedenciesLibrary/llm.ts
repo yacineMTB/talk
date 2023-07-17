@@ -44,7 +44,7 @@ export interface LlamaStreamCommand {
   stop: boolean;
 }
 
-export const llamaInvoke = (prompt: string, input: string, llamaServerUrl: string, personConfig:string, onDataFunction: (data: string) => LlamaStreamCommand): Promise<string> => {
+export const llamaInvoke = (prompt: string, input: string, llamaServerUrl: string, personConfig:string, onDataFunction: (data: string) => void | LlamaStreamCommand): Promise<string> => {
   let formattedPrompt:string;
   formattedPrompt = formatPrompt(prompt, input, personConfig);
   let stopTokens:string[] = [];

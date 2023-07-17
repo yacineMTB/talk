@@ -2,7 +2,7 @@ import { playAudioFile, generateAudio } from './depedenciesLibrary/voice'
 import { llamaInvoke, LlamaStreamCommand } from './depedenciesLibrary/llm';
 
 // Talk: Greedily generate audio while completing an LLM inference
-export const talk = async (prompt: string, input: string, llamaServerUrl: string, personaConfig:string, interruptCallback: (token: string, streamId: string) => boolean, sentenceCallback: (sentence: string) => void): Promise<string> => {
+export const talk = async (prompt: string, input: string, llamaServerUrl: string, personaConfig:string, interruptCallback: null | ((token: string, streamId: string) => boolean), sentenceCallback: (sentence: string) => void): Promise<string> => {
   let sentenceEndRegex = /[.!?,;]/;  // Adjust as necessary.
   let promisesChain = Promise.resolve();
 
@@ -14,10 +14,12 @@ export const talk = async (prompt: string, input: string, llamaServerUrl: string
     const streamCommand: LlamaStreamCommand = {
       stop: false
     }
-    const stopStream = interruptCallback(token, streamId);
-    if (stopStream) {
-      streamCommand.stop = true;
-      return streamCommand;
+    if (interruptCallback) {
+      const stopStream = interruptCallback(token, streamId);
+      if (stopStream) {
+        streamCommand.stop = true;
+        return streamCommand;
+      }
     }
     token = token.replace(/[^a-zA-Z0-9 .,!?'\n-]/g, '');
     currentSentence.push(token);

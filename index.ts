@@ -320,12 +320,12 @@ const cutTranscriptionEventHandler = async (event: TranscriptionEvent) => {
 
 const responseReflexEventHandler = async (event: TranscriptionEvent): Promise<void> => {
   await globalWhisperPromise;
- // Check if there was a response input between the last two transcription events
- const transcriptionEvents = eventlog.events.filter(e => e.eventType === 'transcription');
- const lastTranscriptionEventTimestamp = transcriptionEvents.length > 1 ? transcriptionEvents[transcriptionEvents.length - 2].timestamp : eventlog.events[0].timestamp;
- const responseInputEvents = eventlog.events.filter(e => (e.eventType === 'responseInput'));
- const lastResponseInputTimestamp = responseInputEvents.length > 0 ? responseInputEvents[responseInputEvents.length - 1].timestamp : eventlog.events[0].timestamp;
- if (lastResponseInputTimestamp > lastTranscriptionEventTimestamp) {
+  // Check if there was a response input between the last two transcription events
+  const transcriptionEvents = eventlog.events.filter(e => e.eventType === 'transcription');
+  const lastTranscriptionEventTimestamp = transcriptionEvents.length > 1 ? transcriptionEvents[transcriptionEvents.length - 2].timestamp : eventlog.events[0].timestamp;
+  const responseInputEvents = eventlog.events.filter(e => (e.eventType === 'responseInput'));
+  const lastResponseInputTimestamp = responseInputEvents.length > 0 ? responseInputEvents[responseInputEvents.length - 1].timestamp : eventlog.events[0].timestamp;
+  if (lastResponseInputTimestamp > lastTranscriptionEventTimestamp) {
     const transcription = getTransciptionSoFar();
     if (transcription) {
       const responseReflexEvent: ResponseReflexEvent = {
@@ -350,9 +350,6 @@ const talkEventHandler = async (event: ResponseReflexEvent): Promise<void> => {
 
     // Check if stream has been interrupted by the user
     const interruptCallback = (token: string, streamId: string): boolean => {
-      if (!INTERRUPTION_ENABLED) {
-        return false;
-      }
       const streamInterrupts = eventlog.events.filter(e => e.eventType === 'interrupt' && (e.data?.streamId == streamId));
       if (streamInterrupts?.length) {
         return true;
@@ -390,7 +387,7 @@ const talkEventHandler = async (event: ResponseReflexEvent): Promise<void> => {
       input,
       llamaServerUrl,
       personaConfig,
-      interruptCallback,
+      INTERRUPTION_ENABLED ? interruptCallback : null,
       talkCallback
     );
 
