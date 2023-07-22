@@ -3,7 +3,7 @@
     "version": "0.0.1",
     "lockfileVersion": 3,
     "requires": true,
-    "license": "MIT",
+    "license": "Apache-2.0",
     "scripts": {
         "start": "npx ts-node ./index.ts",
         "test-voice": "npx ts-node ./tests/voice.test.ts",
