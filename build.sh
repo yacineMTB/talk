@@ -145,7 +145,8 @@ echo '{
     "audioListenerScript": "'$AUDIO_LISTENER_SCRIPT'",
     "lora": "",
     "piperModelPath": "./models/piper/en-gb-southern_english_female-low.onnx",
-    "voiceActivityDetectionEnabled": true
+    "voiceActivityDetectionEnabled": true,
+    "interruptionEnabled": true
 }' > config.json
 
 # End of script
